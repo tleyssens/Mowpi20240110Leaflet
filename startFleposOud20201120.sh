@@ -1,0 +1,1 @@
+../../rtk/str2str -in ntrip://89777a003:36698@flepos.vlaanderen.be:2101/FLEPOSVRS31GR#rtcm3 -out serial://ttyUSB0:57600:8:n:1:off -out tcpsvr://:5000 -p 51.01777649 5.37416649 103.00 -s 100000 -n 5000 > /dev/null 2>&1 &

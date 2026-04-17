@@ -1,0 +1,67 @@
+
+20220320 vue2.6 vervangen door vue3 =>zei foot.pug en vueSetup.js 
+				=> missionmenu werkt niet meter
+20220119 simulatie werkt terug (fout zat in NMEAsimTom.js=> datum kwam mee in gga te staa.)
+
+INFO:
+_____
+starten met 
+sudo DEBUG=nmea node bin/www
+simulatie kiezen en "NMEA"-schakelaar opzetten
+wachten tot pijl in huisoppervlak valt en dan knop "Automatisch" op true zetten
+Kijken via browser op 192.168.1.43:3333/map
+
+Startpunt simulatie aanpassen => in /bin/settings.json 
+	Tom ==> "start1": {"lat":50.996328535, "lng": 5.3881682516666665},
+  Remi ==> "start2": {"lat":51.05034169, "lng": 5.30504305},
+  
+	+ in /controllers/nmeaFunc.js regel 30 aanpassen van start1 naar start2 of omgekeerd	
+	var u = $V([s.start1.lng, s.start1.lat]);  
+	of punten aanpassen => in /bin/settings.json kan je de punten ook nog herzetten
+		Tom ==> "start1": {"lat":50.996328535, "lng": 5.3881682516666665},
+  		Remi ==> "start2": {"lat":51.05034169, "lng": 5.30504305},
+  
+  + in /controllers/NMEAsimTom.js regel 10 en 11 aanpassen
+  		Tom 
+  			setGPS_Latitude : 50.996328535,
+			setGPS_Longitude : 5.3881682516666665,
+		Remi
+			setGPS_Latitude : 51.05034169,
+			setGPS_Longitude : 5.30504305,
+	+ in /views/scriptMap.js 
+		regel 70+71 aanpassen
+	+ in /controllers/pathPlanning.js
+		regel 78 aanpassen  recList naar recList1
+		if(contains(s.contour.recList, gps.state.lat, gps.state.lon )) {
+
+	************
+	TargetHeading moet -180 tot 180 zijn. niet 0 tot 360
+	Bearing komt van gps en is van 0 tot 360.
+	AngleError moet van -180 tot 180 zijn.
+	
+	************
+		rekening houden met ingestelde maaisnelheid = NMEAfunc.js regel 245
+				s.LM = s.correction > 0 ? s.autoMowSpeed : s.autoMowSpeed + ((s.autoMowSpeed/90) * s.correction); //20201115
+    		s.RM = s.correction > 0 ? (s.autoMowSpeed - ((s.autoMowSpeed/90) * s.correction) : s.autoMowSpeed;
+
+	************
+
+	Known Base Antenna Position 
+When configured as base, NS‐HP-xx will output its position along with carrier phase raw measurement data over UART TXD. If base NS‐HP-xx antenna will be placed at a location with known position, the position information can be set into NS‐HP-xx using GNSS Viewer.
+
+From RTK pull‐down menu, select Configure RTK Mode And Operational Function, select RTK base mode, select Static Mode and enter antenna latitude-longitude in degrees and ellipsoidal height in meter, update to SRAM+Flas
+
+Unknown Base Antenna Position
+If base antenna position is unknown, set to let it survey for 60sec upon power up. From GNSS Viewer RTK pull down menu, select Configure RTK Mode And Operational Function, select Survey Mode and set Survey Length to 60 and Update to SRAM+Flash.
+
+When later in use, after base NS‐HP-xx gets position fix and self‐surveyed for 60 seconds, it enters into static mode. On GNSS Viewer scatter plot view, one will see the blue dot stop drifting around after static mode is entered; Set Origin button may need to be clicked to center the view in order to see the scatter plot.
+
+Next time powering on the base NS‐HP-xx, it will still start from survey mode again, self‐survey for 60 seconds, with self‐surveyed antenna location at different location unless static mode is chosen and a constant position is entered.
+
+To see what the self‐surveyed latitude, longitude, and altitude values are, from GNSS Viewer RTK pull‐down menu, select Query RTK Mode And Operational Function.
+
+To use the base at some fixed location, use these steps to self‐survey and retrieve surveyed antenna position, then set the antenna position into the base NS‐HP-xx so that it’ll have the same entered position every time it’s powered on later. Noneed to set the antenna position into base NS‐HP-xx if only testing and becoming acquainted with it.
+
+
+Info uit AGOpengps:
+mf.guidanceLineSteerAngle wordt berekend uit de error 

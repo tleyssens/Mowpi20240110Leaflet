@@ -1,0 +1,74 @@
+
+var socket =io();
+
+//document.getElementById('RpiAfsluiten').onclick = RpiAfsluiten;
+
+document.getElementById('AutoMow').onclick = AutoMow;
+document.getElementById('Turn').onclick = Turn;
+//document.getElementById('View').onclick = View;
+
+var joystick	= new VirtualJoystick({
+    container	: document.getElementById('containerMain'),
+    strokeStyle : 'green',
+    mouseSupport	: true,
+    limitStickTravel: true,
+    stickRadius		: 125,
+    stationaryBase : true,
+    baseX: 325,
+    baseY: 250
+});
+console.log("touchscreen is", VirtualJoystick.touchScreenAvailable() ? "available" : "not available");
+//console.log(joystick._container);
+var down = 0;
+
+joystick._container.addEventListener('touchStart', function(){
+    //console.log('down')
+    down = 1;
+})
+joystick._container.addEventListener("mousedown", function(){
+    //console.log('down')
+    down = 1;
+})
+joystick._container.addEventListener('touchEnd', function(){
+    //console.log('up')
+    down = 0;
+})
+joystick._container.addEventListener('mouseup', function(){
+    //console.log('up')
+    down = 0;
+})
+//console.log('joystick ' + JSON.stringify(joystick, null, 4));
+
+function RpiAfsluiten(){
+    socket.emit('RpiAfsluiten');
+    console.log('RpiAfsluiten Emit');
+};
+
+function AutoMow(){
+    socket.emit('AutoMow');
+    console.log('AutoMow Emit');
+};
+function Turn(){
+    socket.emit('Turn');
+    console.log('Turn Emit');
+};
+function View(){
+    socket.emit('View');
+    console.log('View Emit');
+};
+//cc:touchbesturing#2;Stuur coördinaten touch via socket key naar server
+setInterval(function(){
+    if (down) {
+        var outputEl	= document.getElementById('joystickResult');
+        outputEl.innerHTML	= '<b>Result:</b> '
+            + ' dx:'+  joystick.deltaX().toFixed(1)
+            + ' dy:'+ -joystick.deltaY().toFixed(1)
+            + (joystick.right()	? ' right'	: '')
+            + (joystick.up()	? ' up'		: '')
+            + (joystick.left()	? ' left'	: '')
+            + (joystick.down()	? ' down' 	: '')	
+        socket.emit('key', { Key: 'Steering', speed: -joystick.deltaY().toFixed(1)*2, steer: joystick.deltaX().toFixed(1)*2});
+        //socket.emit('key', { Key: 'Steering', value: joystick.deltaX().toFixed(1)});
+//console.log('result ' + JSON.stringify(outputEl, null, 4));
+    }
+}, 1/8 * 1000);

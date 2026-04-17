@@ -1,0 +1,31 @@
+
+nav.navbar.navbar-expand-sm.navbar-dark.bg-dark.mb-4
+  a.navbar-brand(href='/') MowPi #{version}
+    button.navbar-toggler(type='button', data-toggle='collapse', data-target='#navbarsExample01', aria-controls='navbarsExample01', aria-expanded='false', aria-label='Toggle navigation')
+      span.navbar-toggler-icon
+    #navbarsExample01.collapse.navbar-collapse
+      ul.navbar-nav.mr-auto
+        li.nav-item.active
+          a.nav-link(href='#')
+            Home
+            span.sr-only (current)
+        li.nav-item
+          .custom-control.custom-switch
+            input(type='checkbox' class='custom-control-input' id='customSwitchDriveEnable')
+            label(class='custom-control-label' for='customSwitchDriveEnable') Drive Enable
+        .custom-control.custom-switch
+            input(type='checkbox' class='custom-control-input' id='customSwitchAutoMow')
+            label(class='custom-control-label' for='customSwitchAutoMow') Automatisch
+        li.nav-item
+          a.nav-link(href='map') Map
+        //Dropdown NMEA
+        li.nav-item.dropdown
+          a.nav-link.dropdown-toggle(href='#' id='NMEAsource' data-toggle='dropdown') NMEA bron
+          .dropdown-menu
+            a.dropdown-item(href="#" id='keuzeGPS') GPS
+            a.dropdown-item(href="#" id='keuzeSimulatie') Simulatie
+            a.dropdown-item(href="#" id='keuzeFile') File
+        li.nav-item
+          .custom-control.custom-switch
+            input(type='checkbox' class='custom-control-input' id='customSwitchNMEA')
+            label(class='custom-control-label' for='customSwitchNMEA') NMEA

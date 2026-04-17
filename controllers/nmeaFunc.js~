@@ -1,0 +1,324 @@
+"use strict" // gebruikt in simulatie
+var s = require('../bin/settings.json') //laad json-data uit bestand
+var mower = require('../lib/Mower')
+//var nmeaSim = require('./NMEAsimTom.js')
+var NMEAstream = require('./NMEAstream.js')
+const { execFile } = require('child_process');
+//const { isNullOrUndefined } = require('util');
+const split = require('split');
+const PIDcontroller = require('node-pid-controller'),
+    GPS = require('gps'),
+    gps = new GPS
+    gps.state.bearing = 0
+    let ctr = new PIDcontroller({
+      k_p: s.ctr.kp,
+      k_i: s.ctr.ki,
+      k_d: s.ctr.kd,
+      //dt: 1,
+      i_max: s.ctr.imax,
+      target: s.ctr.target
+    });
+    var Sylvester = require('sylvester'),
+        Kalman = require('kalman').KF
+    var A = Sylvester.Matrix.I(2);
+    var B = Sylvester.Matrix.Zero(2, 2);
+    var H = Sylvester.Matrix.I(2);
+    var C = Sylvester.Matrix.I(2);
+    var Q = Sylvester.Matrix.I(2).multiply(1e-5); //hoger getal => smoother en trager was 1e-5
+    var R = Sylvester.Matrix.I(2).multiply(0.000002); //kleiner => sneller     0.000001
+    // Measure
+    var u = $V([s.start2.lat, s.start2.lng]); //moeten de 2 waarden niet omgewisseld ? zie regel 163 / 
+    var filter = new Kalman($V([0, 0]), $M([
+            [1, 0],
+            [0, 1]
+        ]));
+    var prev = {
+            lat: null,
+            lon: null
+          }
+    var parser
+    var nmeaStream
+    var stream
+    //var child
+    var pathPlan =  require('./pathPlanning')
+    var recordPath = require('./recordPath')
+    var mission = require('./mission')
+    //var pathPlan = new PathPlanning
+    var noRTKteller = 0
+	 
+exports.KeyReceived = function (data) {
+	//console.log('in KeyReceived nmeaFunc');
+	//console.log(data);
+	switch (data.Key) {
+	 case "Steering":
+		var X = parseFloat(data.steer)
+      var Y = parseFloat(data.speed)
+      //console.log('data.steer '+ data.steer + ' X '+ X + ' Y  '+ Y)
+      //console.log('in KeyReceived')
+      //console.log(Object.getOwnPropertyNames(nmea))
+      console.log('steerangle in key %s', map_range(X, -250,250,-90,90) )
+      nmeaStream.nmea.steerangle = map_range(X, -250,250,-90,90)
+      nmeaStream.nmea.stepDistance = map_range(Y,-250,250,-0.5,0.5)
+      break
+    case "clickTarget":
+      s.pos.target.lat = data.value.latLng.lat
+      s.pos.target.lon = data.value.latLng.lng
+      //traject.push(data.value.latLng);
+      //io.emit('log', 'punt toegevoegd aan traject: ' + JSON.stringify(traject, null, 4));
+      break;
+    case "Pvalue":
+      console.log('Pvalue = ' + JSON.stringify(data, null, 4));
+      ctr.k_p = data.value;
+      break;
+    case "Ivalue":
+      console.log('ctr = ' + JSON.stringify(s.ctr, null, 4));
+      console.log('Ivalue = ' + JSON.stringify(data, null, 4));
+      ctr.k_i = data.value;
+      break;
+    case "Dvalue":
+      console.log('Dvalue = ' + JSON.stringify(data, null, 4));
+      ctr.k_d = data.value;
+      break;
+  }
+}
+//cc:NMEAstream#;startStream1
+exports.startStream1 = function (socket, s, socketList) {
+  if (s.NMEA.choice === "GPS") {
+    console.log('- ntrip van flepos naar GPS opstarten')
+    //runShellScript('/home/pi/kar/karTom2/startFlepos.sh')
+    //runShellScript('/home/pi/kar/karTom2/startNtripPa.sh')
+    runShellScript('/home/pi/kar/karTom2/startNtripTom.sh')
+  }
+  if (s.NMEA.choice === "Simulatie") { // zorgt voor de wijzerplaat
+    gps.state.speed = 0.2
+  }
+  nmeaStream = NMEAstream.getStream(s)
+    //console.log('in startStream1')
+    //console.log(Object.getOwnPropertyNames(nmeaStream))
+  stream = nmeaStream.pipe(split('\r\n'))
+  // console.log('parser :', parser)
+  // if (parser = 'alert') {
+  //   socket.emit('alert', 'Maak eerst een keuze in de dropdown')
+  // } else {
+    //stream.on('data', line => console.log(`> ${line}`))
+    startParsing(socket, stream, s, socketList)
+  //}
+}
+exports.stopStream1 = function () {
+  console.log('in stopStream1')
+  if (s.NMEA.choice === "GPS") {
+    mower.stop()
+    runShellScript('/home/pi/kar/karTom2/stopFlepos.sh')
+  } 
+  stream.pause()
+}
+exports.enableEncoder = function () {
+}
+//cc:NMEAstream#;
+function startParsing(socket, stream, s, socketList) {
+  //stream.on('data', line => console.log(`> ${line}`))
+  stream.on('data', function (data) { //ontvangt data van simulatie regel per regel
+    //console.log('streamData', data)
+    //socket.emit('nmea', data )// data.quality + " " + data.satellites + " " + data.hdop);//komt op ui/map
+    try {
+        gps.update(data); //stuur een regel door naar gps
+        //console.log(data)
+        //socket.emit('nmea', gps)//komt op ui/map
+        s.gps = gps
+        //socketList.emit('nmea', gps)
+        
+    } catch (e) {
+        //if (s.debugGPS) {
+            console.log(`gps not updated => error ${e.name}: ${e.message}`);
+        //}
+    }
+  })
+  gps.on('data', function (data) {
+    //console.log('gps.data = ' + JSON.stringify(data, null, 4));
+    if (s.debugGPS) {
+      console.log('gpsData '+ JSON.stringify(data, null, 4));
+    }
+    if (gps.state.speed > 0 && gps.state.speed < 5) {
+      //socket.emit('gpsState', gps.state);//data voor wijzerplaat en grafiek in mapsxx.html
+      s.gps = gps
+    }
+  });
+  gps.on('GGA', function (data) { //data bevat de huidige positie
+    //var t0 = performance.now();
+    //socketList.emit('quality', data.quality + " " + data.satellites + " " + data.hdop)//20201024
+    /* if (s.debugGPS) {
+      //io.emit('log', 'GGAdata= ' + JSON.stringify(data, null, 4));
+    }*/
+    s.data = data //20201124
+
+    if (data.valid === false || data.lat === null || data.lon === null || gps.state.speed > 5 || data.lat < -90 || data.lat > 90 || data.lon < -180 || data.lon > 180) {
+      //mower.stop()
+      //io.emit('log', 'invalid data');
+      return //check valid values
+    }
+  
+    if (data.quality == 'rtk' || data.quality == 'rtk-float') { // || data.quality == 'dgps-fix' ) { // || data.quality == 'fix') {
+      //io.emit('log','valid data');
+      filter.update({
+        A: A,
+        B: B,
+        C: C,
+        H: H,
+        R: R,
+        Q: Q,
+        u: u,
+        y: $V([data.lat, data.lon])
+      });
+  
+      data.position = {
+        cov: filter.P.elements,
+        pos: filter.x.elements
+      };
+      s.data = data
+      gps.position = data.position
+
+      if(s.contour.isRecordOn) {
+        recordPath.update(gps.state)
+      }
+      
+      //cc:Contour Opnemen#2; update pathplanning
+      if(s.autoMow2) {
+        pathPlan.update(gps)
+        if (s.uTurn) {
+          if (s.targetHeading == s.ABLine.heading) {
+            if (s.NMEA.choice === "Simulatie") {
+            	nmeaStream.nmea.steerangle = -80 //simulatie alleen?
+            } //trager de bocht nemen anders maakt hij cirkels omdat de hoek te veel in 1 keer veranderd
+            s.LM = s.autoMowBochtSpeedBinnensteWiel - 40// bocht onderkant LM 130 | RM 210 => draait te traag => binnenwiel vertragen 20201122
+            s.RM = s.autoMowBochtSpeedBuitensteWiel + 20
+          } else {
+            if (s.NMEA.choice === "Simulatie") {
+            	nmeaStream.nmea.steerangle = 80
+            }
+            s.LM = s.autoMowBochtSpeedBuitensteWiel // bocht bovenkant LM 210| RM 130 = OK
+            s.RM = s.autoMowBochtSpeedBinnensteWiel
+          }
+        } else {
+          sp1()
+        }
+      }
+      if(s.mission.active) {
+        //console.log('MissionActive')
+        mission.update(gps, socketList)
+        if (s.mission.data.MissionPlan.State > 105) {// was 5
+          sp2()
+        }
+      } 
+      socketList.emit('position', data) //20201024
+      s.pos.prev.lat = data.position.pos[0];
+      s.pos.prev.lon = data.position.pos[1];
+      noRTKteller = 0
+    } else {
+      if (noRTKteller>5) {
+        if(s.mission.active) {
+        	s.LM = 0
+        	s.RM = 0
+        };
+      } else {
+        noRTKteller++
+        //console.log('geen rtk = stoppen over %s seconden', 1 - noRTKteller/5)
+      }
+      //mower.stop()
+    }
+    if (s.driveEnable) { // Motoren aansturen
+		  //driveTest("via gps")      
+      mower.drive(s.LM,s.RM)
+    } else {
+      //mower.stop() //simulatie valt uit anders?
+    }
+    socketList.emit('s', s) 
+  })
+};
+function driveTest(t) {
+  	console.log("driveTest vanuit %s",t)
+}
+function runShellScript(filename) {
+  var child = execFile(filename, [], (error, stdout, stderr) => {
+    console.log(`${filename} uitvoeren`)
+          if (error) {
+              //throw error;
+              console.log(`runShellScripterror ${error}`) // opgelet accent = backtick
+              return
+          }
+          console.log(`${filename} uitgevoerd`)
+      });
+}
+function map_range(value, low1, high1, low2, high2) {
+  return low2 + (high2 - low2) * (value - low1) / (high1 - low1);
+};
+function sp1() {
+  if(s.uTurn) {
+   ctr.update(0)
+   s.correction = 0 
+  } else {
+   s.correction = Math.round(ctr.update(-s.angleError)*10)/10;
+   s.correction = clamp(s.correction, -90, 90);//-255,255//20200924
+   //s.correction = map_range(s.correction, 255,-255,-s.autoMowSpeed, s.autoMowSpeed)
+   console.log('cor = %s',s.correction)
+    //   s.LM = s.correction > 0 ? s.autoMowSpeed : s.autoMowSpeed + s.correction;202010
+    //   s.RM = s.correction > 0 ? s.autoMowSpeed - s.correction: s.autoMowSpeed;
+    s.LM = s.correction > 0 ? s.autoMowSpeed : s.autoMowSpeed + ((s.autoMowSpeed/90) * s.correction); //20201115
+    s.RM = s.correction > 0 ? s.autoMowSpeed - ((s.autoMowSpeed/90) * s.correction) : s.autoMowSpeed;
+    s.PIDout = s.correction
+  }
+  
+  //console.log(Object.getOwnPropertyNames(nmeaStream))
+  if (s.NMEA.choice === "Simulatie") {
+    //let sta = map_range(s.correction, 250,-250,-90,90)//45 was 90
+    console.log('in sp1 angleError = %s ;targetHeading = %s; steerangle = %s',s.angleError,s.targetHeading,s.correction)
+    //nmeaStream.nmea.steerangle = sta
+    nmeaStream.nmea.steerangle = s.correction
+    if (mower.state === 'stopped') {
+      console.log('mower stopped')
+      nmeaStream.nmea.stepDistance = 0
+    }else {
+      nmeaStream.nmea.stepDistance = 0.1
+    }
+  }
+  if (s.NMEA.choice === "GPS") {
+    console.log('LM:%s, RM:%s', s.LM, s.RM);      
+  }
+}
+function sp2() {
+  if(s.uTurn) {
+   ctr.update(0)
+   s.correction = 0 
+  } else {
+   s.correction = Math.round(ctr.update(-s.angleError)*10)/10;
+   s.correction = clamp(s.correction, -90, 90);//-255,255//20200924
+   //s.correction = map_range(s.correction, 255,-255,-s.autoMowSpeed, s.autoMowSpeed)
+   console.log('cor = %s',s.correction)
+   //ctr.k_p = 5
+   console.log('ctr.k_p = %s', ctr.k_p)
+    //   s.LM = s.correction > 0 ? s.autoMowSpeed : s.autoMowSpeed + s.correction;202010
+    //   s.RM = s.correction > 0 ? s.autoMowSpeed - s.correction: s.autoMowSpeed;
+    s.LM = s.correction > 0 ? s.autoMowSpeed : s.autoMowSpeed + ((s.autoMowSpeed/90) * s.correction); //20201115
+    s.RM = s.correction > 0 ? s.autoMowSpeed - ((s.autoMowSpeed/90) * s.correction) : s.autoMowSpeed;
+    s.PIDout = s.correction
+  }
+  
+  //console.log(Object.getOwnPropertyNames(nmeaStream))
+  if (s.NMEA.choice === "Simulatie") {
+    //let sta = map_range(s.correction, 250,-250,-90,90)//45 was 90
+    console.log('in sp2 angleError = %s ;targetHeading = %s; steerangle = %s',s.angleError,s.targetHeading,s.correction)
+    //nmeaStream.nmea.steerangle = sta
+    nmeaStream.nmea.steerangle = s.correction
+    if (mower.state === 'stopped') {
+      console.log('mower stopped')
+      nmeaStream.nmea.stepDistance = 0
+    }else {
+      nmeaStream.nmea.stepDistance = 0.1
+    }
+  }
+  if (s.NMEA.choice === "GPS") {
+    console.log('LM:%s, RM:%s', s.LM, s.RM);      
+  }
+}
+function clamp(val, min, max) {
+  return val > max ? max : val < min ? min : val;
+}

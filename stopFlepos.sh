@@ -1,0 +1,1 @@
+sudo pkill str2str

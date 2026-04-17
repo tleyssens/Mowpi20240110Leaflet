@@ -1,0 +1,55 @@
+class Mower {
+	constructor() {
+		var Gpio = require('pigpio').Gpio,
+			Motor = require('./TomMotor.js') //geo = require('.lib/TomGeolib.js'), bij in gps.js gezet
+		
+		this.LMotor = new Motor.Setup(13, 19, 26, 10, 255) //22,27,17		
+		this.RMotor = new Motor.Setup(16, 20, 21, 10, 255), //11,10,9
+		this.simulatie = false // dit moet je vanaf nu herzetten op false anders worden de motoren niet aangestuurd
+		this.state = "ready"
+		/*this.mes = new Gpio(18, {
+			mode: Gpio.OUTPUT
+		})*/
+		let lastLM = 0
+		let lastRM = 0
+	}
+	drive(LM, RM) {
+			if(!this.simulatie) {
+				this.LMotor.drive(LM)
+				this.RMotor.drive(RM)
+			}
+			this.state = "driving"
+			//if (LM != lastLM || RM != lastRM) {
+			//	console.log('vanuit Mower class:  LM: %s, RM: %s',LM,RM)
+			//	lastLM = LM
+			//	lastRM = RM
+			}
+	}
+	stop() {
+			this.LMotor.drive(0)
+			this.RMotor.drive(0)
+			this.state = "stopped"
+			//console.log('vanuit Mower class: stopped')
+	}
+	cleanup() {
+			this.LMotor.cleanup()
+			this.RMotor.cleanup()
+	}
+	setMes(state) {
+		this.mes = state	
+	}
+	setTarget(lat,lon) {
+		this.target.lat = lat
+		this.target.lon = lon
+		this.state = "driveToTarget"
+	}
+	getState() {
+		return this.state 
+	}
+	doUturn(side) {
+		if (side === "R") {
+			this.drive()
+		}
+	}
+}
+module.exports = new Mower()

@@ -1,0 +1,302 @@
+Algemeen:
+
+literatuur:
+    => https://maptools.com/tutorials/utm/quick_guide
+    
+gps of simulatie stuurt data door 
+    => lat en lon en northing en easting worden opgeslagen in als data betrouwbaar is
+    => UpdateFixPosition wordt telkens opgeroepen  => basisberekeningen worden uigevoerd:
+        * positie lat lon 
+Bearing = 
+
+20230905
+    * usb stick van MowPi1 vol => oude versies backup naar laptop 
+      C:\Users\test\backup
+    * Nu bewerkte versie is MowPi202210/MowPi202203Leaflet
+    * Webinterface start, Keuze GPSudp mogelijk, maar fout "Uncaught ReferenceError: $ is not defined map:384"
+      contour openen => geen bestanden zichtbaar. => oplossing JQuery stond in commentaar in pug-bestanden
+    * controllers/NMEAstream zorgt voor het opstarten van de stream door functie getStream
+      getStream wordt aangeroepen vanuit nmeaFunc.js
+      Dan wordt elke regel gesplitst op "\r\n"
+    * udp.createsocket("udp4") maakt een datagram en geen stream => in nmeaFunc.js startStream1 aanpassen voor udp. 
+      Helemaal onderaan dit bestand staat uitgelegd wat verschil is tussen een datagram en een stream.
+    * simulatie stuurt  $GPGGA,194525.516,5059.7797121,N,00523.2900967,E,4,16,0.7 ,48.887,M,45.800,M    ,, 0000*65
+      udp stuurt        $PANDA,184458.10 ,5059.78170  ,N,00523.28883  ,E,1,12,0.62,48.7  , ,0.049 ,65535,,,    *45
+      (PANDA al vervangen door GPGGA en 0000 toegevoegd voor *)
+      => 1 argument te veel.
+    * Panda opgebouwd in AOG => gps.js aanvullen voor PANDA
+void BuildNmea(void)
+{
+    strcpy(nmea, "");
+
+    if (useDual) strcat(nmea, "$PAOGI,");
+    else strcat(nmea, "$PANDA,");
+
+    strcat(nmea, fixTime);
+    strcat(nmea, ",");
+
+    strcat(nmea, latitude);
+    strcat(nmea, ",");
+
+    strcat(nmea, latNS);
+    strcat(nmea, ",");
+
+    strcat(nmea, longitude);
+    strcat(nmea, ",");
+    strcat(nmea, lonEW);
+    strcat(nmea, ",");
+    // 6
+    strcat(nmea, fixQuality);
+    strcat(nmea, ",");
+    strcat(nmea, numSats);
+    strcat(nmea, ",");
+    strcat(nmea, HDOP);
+    strcat(nmea, ",");
+    strcat(nmea, altitude);
+    strcat(nmea, ",");
+    //10
+    strcat(nmea, ageDGPS);
+    strcat(nmea, ",");
+    //11
+    strcat(nmea, speedKnots);
+    strcat(nmea, ",");
+    //12
+    strcat(nmea, imuHeading);
+    strcat(nmea, ",");
+    //13
+    strcat(nmea, imuRoll);
+    strcat(nmea, ",");
+    //14
+    strcat(nmea, imuPitch);
+    strcat(nmea, ",");
+    //15
+    strcat(nmea, imuYawRate);
+    strcat(nmea, "*");
+    * voorlopig gps.js in modules aangepast voor PANDA
+    
+20230903
+    * GPSudp toevoegen aan keuzeknop "NMEA bron"
+        - views/includes/mapNavbar
+        - views/includes/nav/state.js
+        - socketApi
+        - nmeaFunc.js startStream1
+        - controllers/NMEAstream.js
+20230923
+    * PANDA komt binnen, maar er komen geen punten binnen op de map
+        - latstart en lonstart niet ingevuld in s
+        - komt van gps.state.lat => InitializeFirstFewGPSPositions()
+          aangeroepen in nmeaFunc.js
+20230924
+    * Als je GPSudp kiest, dan NMEA opzet en dan Mission opzet krijg je een rood puntje op de map
+      blijft maar heel even de quality-tekst updaten.
+20231005
+    * dnsmasq en dhcpcd ingesteld op rpi
+    * mowpi is bereikbaar
+    * correctiedata komt niet in rpi
+20231009
+    * Correctiedata in Mowpi1 gekregen:
+        - getRTCMstream.js opstarten op PI4B
+        - Op MowPi1 => cd wlan_kabel => sudo ./wlan_kabel wlan0 eth0 00:00:56:00:00:78
+        - Op MowPi1 andere terminal => cd MowPi202210/MowPi202203Leaflet => sudo DEBUG=*.* node bin/www
+    * groene en rode cirkels niet duidelijk:
+        - laatste factor is 0 voor rode en null voor groende cirkels
+          dit is ook zo voor de eerste paar punten in simulatie
+20231021
+ **** buitentest => geen beweging => in socketApi en ... stond enkel var mower => teruggezet           
+    * stukje manueel gemaaid
+    * gpsudp geeft groene streepjes
+20231104
+    * simulatie van GPSudp mogelijk maken 
+        => Simulatie in mapNavbar.pug aanpassen naar GPS Simulatie en socketApi.js, NMEAstream.js,nmeaFunc.js
+        => GPSudpSimulatie bijzetten
+        => NMEAudpSimTom.js aangemaakt
+20231120
+    * in s poortnummers bijgezet voor gps en sim via udp
+                "UDP": {
+                    "gpsPort": "9999",
+                    "simPort": "9998" }  
+    * nmeaFunc aangepast => udpverbinding pas opzetten als die gebruikt gaat worden
+        => const  udpClientGPS = udp.createSocket("udp4") verhuist naar regel 151 en 174
+        => poortnummer instellen voor udp => nmeaFunc regel 151 en 178
+    * oude data uitfilteren op basis van string => nmeaFunc 439
+        => if (data.time > lastData.time)
+        zie : https://stackoverflow.com/questions/19004950/how-to-compare-time-in-javascript
+    * dataverkeer verminderen => data voor GUI appart zetten in settings.json
+        => s.MaaiMES vervangen door s.GUI.MaaiMES
+20231203
+    * gps-simulatie terug laten werken 
+        - latstart en lonstart niet ingevuld
+            InitializeFirstFewGPSPositions() aangeroepen in UpdateFixPosition()
+        - nmeaFunc regel 251 verschil is 13 a 16 ms dus OK
+        - s.GUI.pos.prev bestond niet => verplaatst in settings.json
+        - s.ABLine ???
+##################### usb stick hapert
+20240105
+    * HD 100GB => lite opgezet en aparte voeding = MowPi1V2
+    * syncthing OK
+    * pigpio install:
+        rm -rf node-modules
+        sudo npm i pigpio --unsafe-perm 
+        sudo npm i
+    * mocha gebruiken als testsuite
+        npm test
+        zie package.json en /test 
+20240106
+    * mocha test werkt
+20240107
+    * pi niet bereikbaar => opnieuw opgestart => OK
+20240110
+    * simulatie werkt, maar simulatieudp niet
+    * foutmelding => EXT4-fs (sda2): failed to convert unwritten extents to written extents -- potential data loss! error -30)
+      HD versleten?
+    * kopie op WSL gezet en in socketApi en ... aanroep pigpio uitgezet => var mower
+20240112
+    * waypointclick werkt terug
+20240114
+    * contour laten zien in gele lijn werkt terug
+20240115
+    * clientLog: futurePoint van server ontvangen= [
+            null,
+            null
+        ] NOK
+    * placefuturepoint hersteld
+20240116
+    * gps.js is na npm install terug naar origineel gegaan => TomGPS.js aangevuld met intermediatePoint en 
+20240117 ...
+    * simulatie stuurt terug 
+20240121
+    * laatste futurepoint niet meer laten verdwijnen => In scriptmap 371 en 388
+    * laatste targetpoint niet meer laten verdwijnen => In scriptmap
+    * laatste cirkels niet meer laten verdwijnen => In scriptmap
+    * !!!! factor in autosteer : 21 bepaalt hoe kort mower draait. kleinere factor = korter draaien. => dit heeft geen invloed op de simulatie!
+    * !!!! factoren in nmeafunc : 349 bepalen ook de draaicirkel. Ook in simulatie.
+20240208
+    * nieuw tussendoel => grafiek laten zien met heading / distance / steerangle / Curvature en pivorError / inty / Total Error / DeriP
+        guidanceLineDistanceOff is het getalletje boven de N van noorden en is het aantal mm dat MowPi van de lijn is.
+        guidanceLineSteerAngle is de stuurhoek *1000 en wordt beperkt door vehicle/maxSteerAngle => staat nu op 48 dus guidanceLineSteerAngle wordt max 4800
+20240227
+    * in socketApi serialport bijgezet => test teleport
+20240309
+    * TESTudpSend gemaakt om udp packetten te sturen naar teleport => werkt
+    * WSL geupdate
+    * wls opstarten in docker gaat ook, voordeel is dat je verschillende nodeversies in verschillende dockers kan testen. Nog niet goed getest
+20240311
+    * self inflicted : paar dagen programma niet meer kunnen starten omdat ik serialport had bijgezet om teleport te kunnen testen => in socketAPi  
+    * testversie gemaakt met enkel udp simulatie 
+        => in master NMEAudpSimTom aangepast naar NMEApandaSimTom => moet enkel de regel aanmaken en geen udp opzetten
+           telplot ook getest => werkt
+        => udpsender aangemaaket => teken rode lijn op scherm en je kunt sturen met joystick
+        Laat de ABlijn niet zien     
+20240419
+    * tijdje bezig geweest met de teensy en AOG bij Pa => rijdt, maar niet heel praktisch.
+    * 
+
+
+
+
+
+
+OUDE LOG
+20230901
+    * geprobeerd om de TeensyGPS keuze toe te voegen => niet aan verder gedaan omdat 
+      de google-maps kaart niet meer wil werken zonder licentie => leaflet gebruiken ipv googlemaps
+20221002 
+    * Module TomGuidance.js aanpassen + testen
+20221006
+    * AB-line vast instellen => welke waardes?
+         - welke functie zet lat/lon om naar easting/northing => GPS.ConvertWGS84ToLocal
+    * backup gemaakt van vorige staat op kleine laptop
+20221009
+    * Knop bijzetten autosteer => OK
+        - views/includes/mapNavbar.pug
+        - socketApi.js
+    * Als Autosteer opstaat => rechtdoor rijden aan vaste snelheid
+        - nmeaStream.nmea.stepDistance = 0.1 bijgezet in nmeaFunc:288
+    * volgende uitgezet in mission.js => geeft enkel boven gemeten punt
+        if (s.nearestPoint) { 
+			socketList.emit('futurePoint', s.nearestPoint ) }
+20221010 => autosteer laat mowpi rechtdoor rijden.
+    * AB-lijn vast instellen in settings.json
+        - A = northing: 0.015, easting: 0.001
+        - B = northing: 13.564674548957216, easting: 1.1899409146465938 } 
+    * TomGPS => ConvertLocalToWGS84 bijgezet
+20221011
+    * TomGuidance toevoegen aan 
+        in www.js let TomGuidance = require('../lib/TomGuidance')
+        TomGuidance(s)
+20221014
+    * TomABLine goalpointDistance werkt
+20221025
+    * reset knop toegevoegd => mowpi springt terug naar vertrekpunt
+20221026
+    * nmeastream knop kan wel stoppen maar start daarna niet meer
+
+setLinearAngularSpeed in mower.js gebruiken? hoe werkt dit in simulatie?
+SendPgnToLoop(p_254.pgn); stuurt de autosteermodule aan in aogps
+
+debugmodule
+    * %O	Pretty-print an Object on multiple lines.
+    * %o	Pretty-print an Object all on a single line.
+    * %s	String.
+    * %d	Number (both integer and float).
+    * %j	JSON. Replaced with the string '[Circular]' if the argument contains circular references.
+    * %%	Single percent sign ('%'). This does not consume an argument.
+
+20221114
+    * serialport werkt niet meer => error : TypeError: SerialPort is not a constructor
+      nieuwe versie van serialport-module denk ik => in readme onder module staat uitleg:
+      => NMEAstream.js 43:49 aangepast => OK
+    * AB-lijn aanpassen voor test voor het huis
+        "lat": 50.996483233790606,
+        "lng": 5.388098396271137 naar
+        "lat": 50.99649589451461,
+        "lng": 5.388224460094837
+        easting -4  northing 14
+        easting 2,2 northing 15 in settings.json
+202211... tekent de AB Lijn en de cirkels ondertussen + touchbesturing en camera bij op hoofdscherm gezet.
+20221218
+    * simulatie aangepast => onnauwkeurigheid simuleren
+        in NMEAsimTom.js bijgezet
+		this.headingTrue += ((Math.random() * 10 - 5)*(Math.PI / 180)) // -5 tot +5 graden fout
+        Werkt in autosteer , maar mission werkt niet meer!?
+20221224
+    * Als knop enable afgezet wordt => mower.drive(0, 0)
+20221231
+    * Dikwijls wil de seriele poort niet goed communiceren na het opnieuw opstarten.
+      Na opstart staat de poort ingesteld op 9600 baud => 
+      Na het starten van het programma en terug uitlezen van de instellingen geeft hij :
+        speed 115200 baud; line = 0;
+        min = 0; time = 0;
+        -brkint -icrnl -imaxbel
+        -opost -onlcr
+        -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke
+      , maar het werkt nog niet.
+      Na aantal keer opstarten werkt het. Uitlezing dan is 
+            speed 115200 baud; line = 0;
+            min = 1; time = 0;
+            -brkint -icrnl -imaxbel
+            -opost -onlcr
+            -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke
+      socat /dev/serial0,raw - geeft dan :
+        $GNGGA,122459.90,5059.78663,N,00523.28083,E,1,12,0.72,37.1,M,46.3,M,,*70
+        $GNGSA,A,3,15,10,14,24,23,12,,,,,,,1.34,0.72,1.13,1*05
+        $GNVTG,,T,,M,0.027,N,0.050,K,A*3D
+        $GAGSV,2,2,06,24,15,052,22,25,68,073,26,2*7C
+        $GNRMC,122459.90,A,5059.78663,N,00523.28083,E,0.027,,010123,,,A,V*10
+      1ste keer socat => gibberish
+      2de keer socat => OK !????
+20230108 karSimpel gemaakt voor PA => alles weg buiten touchbesturing en camera
+    * virtualjoystick aangepast => this._container.getBoundingClientRect().left; bijgezet in regel 172,173 en 195,196
+
+
+Algemene info:
+______________
+* What's the difference between sockets (stream) and sockets (datagrams)?
+
+A long time ago I read a great analogy for explaining the difference between the two. I don't remember where I read it so unfortunately I can't credit the author for the idea, but I've also added a lot of my own knowledge to the core analogy anyway. So here goes:
+A stream socket is like a phone call -- one side places the call, the other answers, you say hello to each other (SYN/ACK in TCP), and then you exchange information. Once you are done, you say goodbye (FIN/ACK in TCP). If one side doesn't hear a goodbye, they will usually call the other back since this is an unexpected event; usually the client will reconnect to the server. There is a guarantee that data will not arrive in a different order than you sent it, and there is a reasonable guarantee that data will not be damaged.
+A datagram socket is like passing a note in class. Consider the case where you are not directly next to the person you are passing the note to; the note will travel from person to person. It may not reach its destination, and it may be modified by the time it gets there. If you pass two notes to the same person, they may arrive in an order you didn't intend, since the route the notes take through the classroom may not be the same, one person might not pass a note as fast as another, etc.
+So you use a stream socket when having information in order and intact is important. File transfer protocols are a good example here. You don't want to download some file with its contents randomly shuffled around and damaged!
+You'd use a datagram socket when order is less important than timely delivery (think VoIP or game protocols), when you don't want the higher overhead of a stream (this is why DNS is primarily a datagram protocol, so that servers can respond to many, many requests at once very quickly), or when you don't care too much if the data ever reaches its destination.
+To expand on the VoIP/game case, such protocols include their own data-ordering mechanism. But if one packet is damaged or lost, you don't want to wait on the stream protocol (usually TCP) to issue a re-send request -- you need to recover quickly. TCP can take up to some number of minutes to recover, and for realtime protocols like gaming or VoIP even three seconds may be unacceptable! Using a datagram protocol like UDP allows the software to recover from such an event extremely quickly, by simply ignoring the lost data or re-requesting it sooner than TCP would.
+VoIP is a good candidate for simply ignoring the lost data -- one party would just hear a short gap, similar to what happens when talking to someone on a cell phone when they have poor reception. Gaming protocols are often a little more complex, but the actions taken will usually be to either ignore the missing data (if subsequently-received data supercedes the data that was lost), re-request the missing data, or request a complete state update to ensure that the client's state is in sync with the server's.

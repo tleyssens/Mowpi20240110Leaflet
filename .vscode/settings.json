@@ -1,0 +1,6 @@
+{
+    "debug.javascript.terminalOptions": {},
+    "debug.javascript.defaultRuntimeExecutable": {
+        "pwa-node": "node"
+    }
+}

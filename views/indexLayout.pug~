@@ -1,0 +1,15 @@
+doctype html
+html
+  include includes/head.pug
+  include includes/indexhead.pug
+  body
+    block content
+    include includes/indexNavbar.pug    
+    script
+      //cc:touchbesturing#1;In UI laad scriptHome.js
+      include includes/scriptHome.js
+      include includes/nav/state.js
+      include includes/scriptNMEA.js
+    include includes/foot.pug
+
+  //script(src='/javascripts/index.js')

@@ -1,0 +1,129 @@
+module.exports = function(s) { //Tom: bijgezet
+    var socket_io = require('socket.io')
+    var io = socket_io()
+    var fs = require('fs')
+    var socketApi = {};
+    const common = require('./controllers/common.js')
+    var GPS = require('gps')
+    socketApi.io = io;
+    //let sim = new common.simu()
+    //var nmeaSim = require('./controllers/NMEAsimTom.js')
+    //var split = require('split')
+
+    let socketFunc = require('./controllers/socketFunc')
+    let nmeaFunc = require('./controllers/nmeaFunc')
+    //let gpsFunc = require('./controllers/gpsFunc')
+    
+    //cc:signin#1;firebase sign in;+2;do call to firebase with credentials
+    io.on('connection', function(socket){
+        console.log(' ***A user connected:  Mes = %s, PID = %s',s.MaaiMES, process.pid);
+        //deel toestand knoppen met nieuwe client
+        socket.emit('state',s)
+
+        //Mesknop bedient in client
+        socket.on('KnopMes',function () {
+            console.log('Mesknop bedient in client')
+            s.MaaiMES = (s.MaaiMES ? false : true)
+            //sync clients (knop aanpassen)
+            io.sockets.emit('state',s) // deel toestand knop met alle clients
+        })
+        socket.on('KnopEncoderEnable', function () {
+            nmeaFunc.enbleEncoder()
+        })
+        //cc:NMEAstream#;startStream1 
+        //NMEAknop bedient in client
+        socket.on('KnopNMEA',function () {
+            console.log('NMEAknop bediend in client')
+            s.NMEA.state = (s.NMEA.state ? false : true)
+            //sync clients (knop aanpassen)
+            io.sockets.emit('state',s)
+            if(s.NMEA.state) {
+                nmeaFunc.startStream1(socket, s)
+            } else {
+                console.log('stopping nmea stream')
+                nmeaFunc.stopStream1()
+            }       
+        })
+        socket.on('NMEAsource', function (choice) { //Keuzemenu NMEA bron1
+            s.NMEA.choice = choice                  //GPS, Simulatie of file
+            socket.emit('state', s)
+        })
+        socket.on('ContourChoice', function(choice) {
+            s.contour.choice = choice
+            //cc:Contour Opnemen#1; Knop gedrukt in client => s aanpassen + sync clients
+            if (s.contour.choice == "Opnemen") {
+                s.contour.isRecordOn = (s.contour.isRecordOn ? false : true);
+                s.contour.recordColor = (s.contour.recordColor == "red" ? "" : "red")
+                console.log('kleur aanpassen')
+            }
+            if (s.contour.choice == "Openen") {
+                fs.readFile('Contour1.json', 'utf-8', (err, data) => {
+                    if (err) {
+                        throw err;
+                    } 
+                    // parse JSON object
+                    const user = JSON.parse(data.toString());
+                    // print JSON object
+                    console.log(user);
+                });
+            }
+            if (s.contour.choice == "Tonen") {
+                console.log('tonen')
+                s.contour.tonen = (s.contour.tonen ? false : true);
+                if (s.contour.tonen) { socket.emit('traject', s.contour.recList) }
+            }
+            if (s.contour.choice == "Opslaan") {
+                const data = JSON.stringify(s.contour.recList);
+                fs.writeFile('Contour1.json', data, (err) => {
+                    if (err) {
+                        throw err;
+                    }
+                    console.log("JSON data is saved.");
+                });
+            }
+            if (s.contour.choice == "Wissen") {
+                s.contour.recList = []
+                //console.log(JSON.stringify(s))
+            }
+            socket.emit('state', s)
+        })
+        //cc:AutoMow#3;AutoMow ontvangen van server => s aanpassen + sync clients
+        socket.on('AutoMow', function () {
+            console.log('AutoMowKnop bedient in client')
+            s.autoMow2 = (s.autoMow2 ? false : true) // rijden op gps alleen
+            //s.autoMow3 = (s.autoMow3 ? false : true) // rijden op magneetsensor = wordt te fel gestoord door motoren 
+            socket.emit('state', s)
+        })
+        //cc:touchbesturing#3; sim.type = 3 is simulatie in UI, anders motoren aansturen
+        if (s.simulatie.type == 3) { //simuleer 
+            socket.on('key', nmeaFunc.KeyReceived) //Key received from client
+        } else { // stuur motoren aan
+            socket.on('key', socketFunc.KeyReceived); //Key received from client
+        }
+
+        socket.on('DriveEnable',function () {
+            s.driveEnable = (s.driveEnable ? false : true);
+            console.log('DriveEnable = ' + s.driveEnable);
+        })
+
+        socket.on('FixedRoute',function () {
+            console.log('FixedRoute emit ontvangen')
+        })
+
+        socket.on("*",function(event,data) {
+            console.log(event);
+            console.log(data);
+        });
+    });
+    
+    io.on('disconnect', reason => {
+        console.log(`reason: ${reason}`);
+    });
+
+    socketApi.sendNotification = function() {
+        io.sockets.emit('hello', {msg: 'Hello World!'});
+    }
+
+    //module.exports = socketApi;
+    return socketApi //Tom: bijgezet (anders cannot find attach)
+} //Tom: bijgezet

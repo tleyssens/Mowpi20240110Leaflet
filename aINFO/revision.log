@@ -1,0 +1,41 @@
+20221002 
+    * Module TomGuidance.js aanpassen + testen
+20221006
+    * AB-line vast instellen => welke waardes?
+         - welke functie zet lat/lon om naar easting/northing => GPS.ConvertWGS84ToLocal
+    * backup gemaakt van vorige staat op kleine laptop
+20221009
+    * Knop bijzetten autosteer => OK
+        - views/includes/mapNavbar.pug
+        - socketApi.js
+    * Als Autosteer opstaat => rechtdoor rijden aan vaste snelheid
+        - nmeaStream.nmea.stepDistance = 0.1 bijgezet in nmeaFunc:288
+    * volgende uitgezet in mission.js => geeft enkel boven gemeten punt
+        if (s.nearestPoint) { 
+			socketList.emit('futurePoint', s.nearestPoint ) }
+20221010 => autosteer laat mowpi rechtdoor rijden.
+    * AB-lijn vast instellen in settings.json
+        - A = northing: 0.015, easting: 0.001
+        - B = northing: 13.564674548957216, easting: 1.1899409146465938 } 
+    * TomGPS => ConvertLocalToWGS84 bijgezet
+20221011
+    * TomGuidance toevoegen aan 
+        in www.js let TomGuidance = require('../lib/TomGuidance')
+        TomGuidance(s)
+20221014
+    * TomABLine goalpointDistance werkt
+20221025
+    * reset knop toegevoegd => mowpi springt terug naar vertrekpunt
+20221026
+    * nmeastream knop kan wel stoppen maar start daarna niet meer
+
+setLinearAngularSpeed in mower.js gebruiken? hoe werkt dit in simulatie?
+SendPgnToLoop(p_254.pgn); stuurt de autosteermodule aan in aogps
+
+debugmodule
+    * %O	Pretty-print an Object on multiple lines.
+    * %o	Pretty-print an Object all on a single line.
+    * %s	String.
+    * %d	Number (both integer and float).
+    * %j	JSON. Replaced with the string '[Circular]' if the argument contains circular references.
+    * %%	Single percent sign ('%'). This does not consume an argument.

@@ -1,0 +1,42 @@
+{
+  "name": "mowpi63-3b2",
+  "version": "12.18.4",
+  "private": true,
+  "main": "./bin/www",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "node ./bin/www.js",
+    "start:dev": "DEBUG=express:* sudo nodemon -e js,mjs,json,pug,css ./bin/www",
+    "build": "webpack",
+    "build:dev": "webpack-dev-server"
+  },
+  "dependencies": {
+    "cookie-parser": "~1.4.4",
+    "debug": "~2.6.9",
+    "express": "~4.16.1",
+    "geodesy": "2.2.1",
+    "gps": "^0.5.3",
+    "http-errors": "~1.6.3",
+    "jsoneditor": "^9.1.5",
+    "kalman": "0.0.2",
+    "morgan": "~1.9.1",
+    "node-pid-controller": "^1.0.1",
+    "pigpio": "^3.2.4",
+    "pug": "^3.0.0",
+    "serialport": "^9.0.2",
+    "socket.io": "^2.3.0",
+    "split": "^1.0.1",
+    "sylvester": "0.0.21",
+    "vue": "^2.6.11"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.7",
+    "@types/node": "^14.0.27",
+    "nodemon": "^2.0.6",
+    "ts-node": "^8.10.2",
+    "typescript": "^3.9.7",
+    "webpack": "^4.43.0",
+    "webpack-cli": "^3.3.11",
+    "webpack-dev-server": "^3.11.0"
+  }
+}

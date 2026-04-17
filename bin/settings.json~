@@ -1,0 +1,120 @@
+{
+  "plaats":"pa",
+  "motortype": "Hbrug",  
+  "pos": {
+    "prev": {
+      "lat": null,
+      "lon": null
+    },
+    "temp": {
+      "lat": null,
+      "lon": null
+    },
+    "target": {
+      "lat": null,
+      "lon": null
+    },
+    "minDistance": 0.05
+  },
+  "angleError": null,
+  "driveEnable": false,
+  "NMEA": {
+    "choice": "NMEA bron1", 
+    "state": false
+  },
+  "MaaiMES": false,
+  "MAXBOUNDARIES": 6,
+  "simulatie": {
+    "state": true,
+    "type": 3,
+    "type aangepast op 20210221van 2 naar 3": "info",
+    "degrees": 0,
+    "speed": 0.5,
+    "speedOud": 0.5
+  },
+  "ctr": {
+    "kp": 2,
+    "ki": 0.1,
+    "kd": 0.15,
+    "imax": 25,
+    "target": 0,
+    "kpOud": 2,
+    "kiOud": 0.1,
+    "kdoud": 0.15,
+    "imaxOud": 45
+  },
+  "debugDrive": false,
+  "debugGPS": false,
+  "debugPID": false,
+  "Rmin": 0.4,
+  "laSec": 2,
+  "laMul": 1,
+  "laMin": 0.2,
+  "autoMow": 0,
+  "prevAutoMow": 0,
+  "autoMow1": 0,
+  "autoMow2": false,
+  "autoMow3": false,
+  "autoMowSpeed": 255,
+  "autoMowBochtSpeedBuitensteWiel": 210,
+  "autoMowBochtSpeedBinnensteWiel": 130,
+  "bat": 0,
+  "mesStop": 0,
+  "back": 0,
+  "side": "",
+  "L": false,
+  "R": false,
+  "t1": null,
+  "t2": null,
+  "t3": null,
+  "t4": null,
+  "uTurn": false,
+  "uTurnDir": "R",
+  "minTurningRadius": 50,
+  "maaiBreedte": 500,
+  "maaiOverlap": 5,
+  "targetHeading": null,
+  "ABLine" : {
+    "set": false,
+    "heading": -15,
+    "lat": 0,
+    "lon": 0,
+    "refABLineP1": 0
+  },
+  "start1": {"lat":50.996328535, "lng": 5.3881682516666665, "richting": 0},
+  "start2": {"lat":51.05035973468406, "lng": 5.304913864941736, "richting": -15},
+  "mission" : {
+    "log": "log",
+    "active" : false,
+    "prevState" : false,
+    "fileName" : "",
+    "data" : {}
+  },
+  "contour": {
+    "fileList": [],
+    "fileListStr": "",
+    "isRecordOn": false,
+    "prevInside": true,
+    "prevPos": { "lat" : 0, "lng" : 0},
+    "TriggerDistance": 0.5,
+    "recListTom": [
+      {"lat": 50.99645206234544, "lng": 5.388025053595205},
+      {"lat": 50.99646510020556, "lng": 5.388205845885143},
+      {"lat": 50.996378576155045, "lng": 5.388217145410938},
+      {"lat": 50.99636, "lng": 5.388045}],
+    "recListPa": [
+      {"lat": 51.05033831772649, "lng": 5.305010863491808},
+      {"lat": 51.050443701158166, "lng": 5.3049283855646},
+      {"lat": 51.05048142836842, "lng": 5.305075571784292},
+      {"lat": 51.050338739260695, "lng": 5.305129551240717},
+      {"lat": 51.050334945452704, "lng": 5.305105411359583},
+      {"lat": 51.05035897289798, "lng": 5.305085294791971}],
+    "recList": []
+  },
+  "recPath": {
+    "isRecordOn": false,
+    "prevPos": { "lat" : 0, "lng" : 0},
+    "TriggerDistance": 0.5, 
+    "recList": []
+  }
+}

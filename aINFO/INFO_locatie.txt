@@ -1,0 +1,28 @@
+uit OpenAG:  in ons programma is pn vervangen door gps
+ switch (data[3])
+                {
+                    case 0xD6:
+                        {
+                            if (udpWatch.ElapsedMilliseconds < udpWatchLimit)
+                            {
+                                udpWatchCounts++;
+                                if (isLogNMEA) pn.logNMEASentence.Append("*** "
+                                    + DateTime.UtcNow.ToString("ss.ff -> ", CultureInfo.InvariantCulture)
+                                    + udpWatch.ElapsedMilliseconds + "\r\n");
+                                return;
+                            }
+                            udpWatch.Reset();
+                            udpWatch.Start();
+
+                            double Lon = BitConverter.ToDouble(data, 5);
+                            double Lat = BitConverter.ToDouble(data, 13);
+
+                            if (Lon != double.MaxValue && Lat != double.MaxValue)
+                            {
+                                if (timerSim.Enabled)
+                                    DisableSim();
+
+                                pn.longitude = Lon;
+                                pn.latitude = Lat;
+
+                                pn.ConvertWGS84ToLocal(Lat, Lon, out pn.fix.northing, out pn.fix.easting);

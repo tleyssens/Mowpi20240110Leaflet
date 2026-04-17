@@ -1,0 +1,655 @@
+"use strict"
+var s = require('../bin/settings.json'),
+		GeographicLib = require("geographiclib"),
+		geod = GeographicLib.Geodesic.WGS84,
+		positions = [],
+		traject = [],
+		targets = [],
+		targetHeading = 0,
+  	targetDistance = 0,
+		minDistance = 0.1, //meter
+		n = 1,
+		GPS = require('gps'),
+		latLng1 = {
+			lat: null,
+			lng: null,
+		},
+		latlng = [],
+		prev = {
+			lat: null,
+			lon: null
+		},
+		prePrevTrajectLat = 0,
+		prePrevTrajectLon = 0,
+		prevTrajectLat = 0,
+		prevTrajectLon = 0,
+		trajectLat = 0,
+		trajectLon = 0,
+		trajectDistance = 0,
+		target = {
+			lat: null,
+			lon: null,
+			n: null
+		},
+		targetLat = 0,
+		targetLon = 0,
+		pathSection = [],
+		missionPath = []
+
+exports.update = function (gps, socketList) {
+	/*Object.entries(s).forEach(
+    ([key, value]) => console.log(key, value)
+	);*/
+	switch (s.mission.data.MissionPlan.State) {
+		case 0 : //setup = traject inlezen, startpunt MowArea toevoegen, tijd wachten om RTK te laten stabiel worden
+			traject = s.mission.data.MissionPlan.MowArea.contour
+			s.mission.log += ('||traject = ' + JSON.stringify(traject, null, 4));
+			traject.unshift(s.mission.data.MissionPlan.MowArea.start)//startpunt mowarea toevoegen aan begin traject
+			s.mission.data.MissionPlan.MowArea.start.lon = s.mission.data.MissionPlan.MowArea.start.lng
+			s.mission.data.MissionPlan.MowArea.start.n = "MowAreaStart"
+			socketList.emit('target', s.mission.data.MissionPlan.MowArea.start)
+			setTimeout(timeout, 100, 'Tijd Om')// // wacht tot RTK beetje stabiel is en roept functie timeout aan onderaan
+			s.mission.data.MissionPlan.State = 1
+			break
+		case 5: // 
+			console.log('in case 5')
+			latLng1.lat = gps.position.pos[0] //Huidige positie opslaan
+			latLng1.lng = gps.position.pos[1]
+			latLng1.lon = gps.position.pos[1]
+			latLng1.n = "huidige positie"
+			socketList.emit('target', latLng1)
+			s.mission.log += ('||Huidige positie = ' + JSON.stringify(latLng1, null, 4))
+			traject.unshift(latLng1) // Voeg huidig punt toe vooraan in array [0]=huidig [1]=A, [2]=B
+			s.mission.log += ('||traject met huidige positie + startpunt MowArea + contour = ' + JSON.stringify(traject, null, 4));
+			prevTrajectLat = traject[0].lat
+			prevTrajectLon = traject[0].lng
+			trajectLat = traject[1].lat
+			trajectLon = traject[1].lng
+			trajectDistance = 1000 * GPS.Distance(prevTrajectLat, prevTrajectLon, trajectLat, trajectLon); //in meter 
+			s.mission.log += ('||trajectDistance = ' + trajectDistance)
+			target = GPS.intermediatePoint(prevTrajectLat, prevTrajectLon, trajectLat, trajectLon, minDistance * 8 / trajectDistance); //eerste punt ligt 0,8m verder
+			targets.push(target)
+			target.n = targets.length
+			s.mission.target = target
+			socketList.emit('target', target)
+			targetLat = target.lat
+			targetLon = target.lon
+			console.log(JSON.stringify(s.mission.log, null, 4))
+
+			s.mission.data.MissionPlan.State = 10
+
+			s.pos.prev.lat = s.data.position.pos[0]
+			s.pos.prev.lon = s.data.position.pos[1]
+			break
+		case 10:
+			console.log('in case 10')
+	
+			if (s.pos.prev.lat !== null && s.pos.prev.lon !== null) {
+        if (s.pos.prev.lat !== s.data.position.pos[0]) { //was gps.state.lat
+            s.pos.temp.lat = s.data.position.pos[0]; //(1 - alpha) * data.position.pos[0] + alpha * prev.lat; // smoothed    //was gps.state.lat  // Nieuwe positie berekend
+            s.pos.temp.lon = s.data.position.pos[1]; //(1 - alpha) * data.position.pos[1] + alpha * prev.lon;// was gps.state.lon
+            
+            if (positions.length == 0) {
+                positions.push(s.pos.temp.lat, s.pos.temp.lon);
+            };
+            if (positions.length) {               
+                s.distance1 = GPS.Distance(s.pos.temp.lat, s.pos.temp.lon, positions[0], positions[1]) * 1000; //km naar meter
+                gps.state.bearing = GPS.Heading(positions[0], positions[1], s.pos.temp.lat, s.pos.temp.lon); //geeft waarde van 0 tot 360
+                if (gps.state.bearing > 180) gps.state.bearing -= 360;
+                if (gps.state.bearing < -180) gps.state.bearing += 360;
+                if (s.distance1 > s.pos.minDistance) { //als de nieuwe positie meer dan 0.1m weg is van het vorige punt=> bereken de richting
+                    //if (s.debugGPS) {
+                        console.log('gps bearing gezet op : %s', gps.state.bearing);
+                    //}
+                    positions[0] = s.pos.temp.lat; // positions bevat de oude positie
+                    positions[1] = s.pos.temp.lon;
+                }
+                //else {console.log('fout')}
+            }
+        } else { console.log('s.pos.prev.lat gelijk aan s.data.prev.lon')}
+			}
+			targetDistance = 1000 * GPS.Distance(gps.position.pos[0], gps.position.pos[1], targetLat, targetLon) //in meter
+			
+			if (targetDistance < (minDistance * 6)) {//was 3
+        // bijna aan target
+        trajectDistance = 1000 * GPS.Distance(prevTrajectLat, prevTrajectLon, trajectLat, trajectLon) //in meter
+        if (trajectDistance < (minDistance * 8)) { // was 15
+          // bijna aan trajectpunt => neem het volgende trajectpunt. Als aan laatste punt, rij terug naar het eerste
+          if (n <= traject.length) {
+            n++;
+          } else {
+            n = 1;
+          };
+          //io.emit('log', 'traject['+n+'].lat = ' + traject[n].lat );
+          prevTrajectLat = trajectLat;
+          prevTrajectLon = trajectLon;
+          trajectLat = traject[n].lat;
+          trajectLon = traject[n].lng;
+
+          trajectDistance = 1000 * GPS.Distance(prevTrajectLat, prevTrajectLon, trajectLat, trajectLon); //in meter
+          if (trajectDistance == 0) {
+            s.autoMow = 0;
+            return
+          }
+          //io.emit('log', 'traject '+ n + ' prev= '+ prevTrajectLat + ', ' + prevTrajectLon +' nieuw='+ trajectLat + ', ' + trajectLon + ' minDistance '+ minDistance +' trajectDistance =' + trajectDistance);
+          target = GPS.intermediatePoint(prevTrajectLat, prevTrajectLon, trajectLat, trajectLon, minDistance * 8 / trajectDistance); //was 3
+					//socketList.emit('target', target)//werkt niet?
+					//io.emit('log', 'target1' + JSON.stringify(target, null, 4));
+          targetLat = target.lat;
+          targetLon = target.lon;
+        } else { //we zijn nog ver van trajectpunt weg dus bereken een tussenpunt
+          prevTrajectLat = targetLat;
+          prevTrajectLon = targetLon;
+          target = GPS.intermediatePoint(prevTrajectLat, prevTrajectLon, trajectLat, trajectLon, minDistance * 10 / trajectDistance); //was 4
+					//socketList.emit('target', target)
+					//io.emit('log', 'target2 '+ n + ' prev= '+ prevTrajectLat + ', ' + prevTrajectLon +' nieuw='+ trajectLat + ', ' + trajectLon + ' minDistance '+ minDistance +' trajectDistance =' + trajectDistance);    
+          targetLat = target.lat
+          targetLon = target.lon
+          //io.emit('log', 'target2' + JSON.stringify(target, null, 4));
+        };
+        if (target.lat !== null) {
+          //io.emit('log', target.lat)
+          targets.push(target)
+          target.n = targets.length
+					socketList.emit('target', target)
+				}
+			}
+			s.targetHeading = GPS.Heading(gps.position.pos[0], gps.position.pos[1], targetLat, targetLon); //geeft een waarde van 0 tot 360 graden
+			console.log('targetHead ==> %s', s.targetHeading)
+			if (s.targetHeading > 180) s.targetHeading -= 360;
+			if (s.targetHeading < -180) s.targetHeading += 360;
+			s.angleError = s.targetHeading - gps.state.bearing;
+			if (s.angleError > 180) s.angleError -= 360;
+			if (s.angleError < -180) s.angleError += 360;
+			//	console.log('gps = ' + JSON.stringify(gps, null, 4));
+			console.log('=> targetHeading = %s, => angleError = %s, => bearing = %s ', s.targetHeading, s.angleError, gps.state.bearing)
+			break
+		case 100: // 1 sectie berekenen
+			console.log('case 100')
+			traject = s.mission.data.MissionPlan.MowArea.contour
+			//console.log('wp14 :' + JSON.stringify(wp_14, null, 4))
+			let wp_14 = waypoints(traject[0][0], traject[0][1], traject[3][0], traject[3][1])
+			let wp_23 = waypoints(traject[1][0], traject[1][1], traject[2][0], traject[2][1])
+			let wp_12 = waypoints(traject[0][0], traject[0][1], traject[1][0], traject[1][1])
+			let wp_34 = waypoints(traject[2][0], traject[2][1], traject[3][0], traject[3][1])
+			if (s.mission.data.MissionPlan.MowArea.type == "parallel") {
+				pathSection = path(wp_14,wp_23)
+			} else if(s.mission.data.MissionPlan.MowArea.type == "squared") {
+				pathSection = circlePath(traject)	//steeds kleiner wordende vierkanten
+			}
+			console.log('path van 1 sectie berekend')
+			console.log(pathSection)
+			s.mission.data.MissionPlan.State = 101
+			setTimeout(timeout2, 1000, 'Wachttijd RTK Om')
+			break
+		case 101:
+			console.log('case 101')
+			s.mission.data.MissionPlan.State = 102
+			break
+		case 102:// secties samenvoegen
+		  console.log('case 102')
+			missionPath.push(pathSection)
+			socketList.emit('missionPath', missionPath[0])
+			break
+		case 103:
+			console.log('case 103')
+			traject = pathSection
+			//s.mission.log += ('||traject103 = ' + traject)//JSON.stringify(traject, null, 4));
+			traject.unshift(s.mission.data.MissionPlan.MowArea.start)//startpunt mowarea toevoegen aan begin traject
+			s.mission.data.MissionPlan.MowArea.start.n = "MowAreaStart"
+			socketList.emit('targetA', s.mission.data.MissionPlan.MowArea.start)
+			s.mission.data.MissionPlan.State = 105
+			break
+		case 104:
+			console.log('case 104') //recordedPath afrijden
+			traject = s.mission.data.MissionPlan.MowArea.contour
+			s.mission.data.MissionPlan.State = 105
+			break
+		case 105:
+			console.log('in case 105')
+			//Huidige positie opslaan
+			latlng[0] = gps.position.pos[0]
+			latlng[1] = gps.position.pos[1]
+			latlng[2] = "huidige positie"
+			socketList.emit('targetA', latlng)
+
+			s.mission.log += ('||Huidige positie = ' + latlng)
+			//traject.unshift(latlng) // Voeg huidig punt toe vooraan in array [0]=huidig [1]=A, [2]=B
+			s.mission.log += ('||traject met huidige positie + startpunt MowArea + contour = ' + traject)//JSON.stringify(traject, null, 4));
+			//prevTrajectLat = traject[0][0]
+			//prevTrajectLon = traject[0][1]
+			prevTrajectLat = gps.position.pos[0]
+			prevTrajectLon = gps.position.pos[1]
+			trajectLat = traject[1][0]
+			trajectLon = traject[1][1]
+			trajectDistance = 1000 * GPS.Distance(prevTrajectLat, prevTrajectLon, trajectLat, trajectLon); //in meter 
+			s.mission.log += ('||trajectDistance = ' + trajectDistance)
+			target = GPS.intermediatePoint(prevTrajectLat, prevTrajectLon, trajectLat, trajectLon, minDistance * 8 / trajectDistance); //eerste punt ligt 0,8m verder
+			targets.push(target)
+			target.n = targets.length
+			s.mission.target = target
+			s.mission.log += ('||target = ' + JSON.stringify(target, null, 4)) 
+			socketList.emit('target', target)
+			targetLat = target.lat
+			targetLon = target.lon
+			console.log(JSON.stringify(s.mission.log, null, 4))
+			s.mission.data.MissionPlan.State = 110
+			s.pos.prev.lat = s.data.position.pos[0]
+			s.pos.prev.lon = s.data.position.pos[1]
+			break
+		case 110:
+			console.log('case 110')
+			if (s.pos.prev.lat !== null && s.pos.prev.lon !== null) {
+        if (s.pos.prev.lat !== s.data.position.pos[0]) { //was gps.state.lat
+            s.pos.temp.lat = s.data.position.pos[0]; //(1 - alpha) * data.position.pos[0] + alpha * prev.lat; // smoothed    //was gps.state.lat  // Nieuwe positie berekend
+            s.pos.temp.lon = s.data.position.pos[1]; //(1 - alpha) * data.position.pos[1] + alpha * prev.lon;// was gps.state.lon
+            
+            if (positions.length == 0) {
+                positions.push(s.pos.temp.lat, s.pos.temp.lon);
+            };
+            if (positions.length) {               
+                s.distance1 = GPS.Distance(s.pos.temp.lat, s.pos.temp.lon, positions[0], positions[1]) * 1000; //km naar meter
+                gps.state.bearing = GPS.Heading(positions[0], positions[1], s.pos.temp.lat, s.pos.temp.lon); //geeft waarde van 0 tot 360
+                if (gps.state.bearing > 180) gps.state.bearing -= 360;
+                if (gps.state.bearing < -180) gps.state.bearing += 360;
+                if (s.distance1 > s.pos.minDistance) { //als de nieuwe positie meer dan 0.1m weg is van het vorige punt=> bereken de richting
+                    //if (s.debugGPS) {
+                        console.log('gps bearing gezet op : %s', gps.state.bearing);
+										//}
+										s.futurePoint = destinationPoint(gps.state.lat, gps.state.lon, 1.5, gps.state.bearing) //kruisjes berekenen
+										//console.log('futurePoint %s', s.futurePoint)
+										//socketList.emit('futurePoint', s.futurePoint )
+										s.nearestPoint = getPerp(prePrevTrajectLat, prePrevTrajectLon, trajectLat, trajectLon, gps.state.lat, gps.state.lon)
+										//socketList.emit('futurePoint', s.nearestPoint )
+										let afwijking = 1000 * GPS.Distance(gps.state.lat, gps.state.lon, s.nearestPoint[0], s.nearestPoint[1]); //in meter
+										console.log('afwijking = %s of %s m', s.nearestPoint[2], afwijking)
+
+
+                    positions[0] = s.pos.temp.lat; // positions bevat de oude positie
+                    positions[1] = s.pos.temp.lon;
+                }
+                //else {console.log('fout')}
+            }
+        } else { console.log('s.pos.prev.lat gelijk aan s.data.prev.lon')}
+			}
+			targetDistance = 1000 * GPS.Distance(gps.position.pos[0], gps.position.pos[1], targetLat, targetLon) //in meter
+			
+			if (targetDistance < (minDistance * 6)) {//was 3
+        // bijna aan target
+        trajectDistance = 1000 * GPS.Distance(prevTrajectLat, prevTrajectLon, trajectLat, trajectLon) //in meter
+        if (trajectDistance < (minDistance * 8)) { // was 15
+          // bijna aan trajectpunt => neem het volgende trajectpunt. Als aan laatste punt, rij terug naar het eerste
+          if (n <= traject.length) {
+            n++;
+          } else {
+            n = 1;
+          };
+          //io.emit('log', 'traject['+n+'].lat = ' + traject[n].lat );
+					prePrevTrajectLat = prevTrajectLat
+					prePrevTrajectLon = prevTrajectLon
+					prevTrajectLat = trajectLat;
+					prevTrajectLon = trajectLon;
+          trajectLat = traject[n][0]//.lat;
+          trajectLon = traject[n][1]//.lng;
+
+          trajectDistance = 1000 * GPS.Distance(prevTrajectLat, prevTrajectLon, trajectLat, trajectLon); //in meter
+          if (trajectDistance == 0) {
+            s.autoMow = 0;
+            return
+          }
+          //io.emit('log', 'traject '+ n + ' prev= '+ prevTrajectLat + ', ' + prevTrajectLon +' nieuw='+ trajectLat + ', ' + trajectLon + ' minDistance '+ minDistance +' trajectDistance =' + trajectDistance);
+          target = GPS.intermediatePoint(prevTrajectLat, prevTrajectLon, trajectLat, trajectLon, minDistance * 8 / trajectDistance); //was 3
+					//socketList.emit('target', target)//werkt niet?
+					//io.emit('log', 'target1' + JSON.stringify(target, null, 4));
+          targetLat = target.lat;
+          targetLon = target.lon;
+        } else { //we zijn nog ver van trajectpunt weg dus bereken een tussenpunt
+					prePrevTrajectLat = prevTrajectLat
+					prePrevTrajectLon = prevTrajectLon
+					prevTrajectLat = targetLat;
+          prevTrajectLon = targetLon;
+          target = GPS.intermediatePoint(prevTrajectLat, prevTrajectLon, trajectLat, trajectLon, minDistance * 10 / trajectDistance); //was 4
+					//socketList.emit('target', target)
+					//io.emit('log', 'target2 '+ n + ' prev= '+ prevTrajectLat + ', ' + prevTrajectLon +' nieuw='+ trajectLat + ', ' + trajectLon + ' minDistance '+ minDistance +' trajectDistance =' + trajectDistance);    
+          targetLat = target.lat
+          targetLon = target.lon
+          //io.emit('log', 'target2' + JSON.stringify(target, null, 4));
+        };
+        if (target.lat !== null) {
+          //io.emit('log', target.lat)
+          targets.push(target)
+          target.n = targets.length
+					socketList.emit('target', target)
+				}
+			}
+			s.targetHeading = GPS.Heading(gps.position.pos[0], gps.position.pos[1], targetLat, targetLon); //geeft een waarde van 0 tot 360 graden
+			console.log('targetHead ==> %s', s.targetHeading)
+			if (s.targetHeading > 180) s.targetHeading -= 360;
+			if (s.targetHeading < -180) s.targetHeading += 360;
+			s.angleError = s.targetHeading - gps.state.bearing;
+			if (s.angleError > 180) s.angleError -= 360;
+			if (s.angleError < -180) s.angleError += 360;
+			//	console.log('gps = ' + JSON.stringify(gps, null, 4));
+			console.log('=> targetHeading = %s, => angleError = %s, => bearing = %s ', s.targetHeading, s.angleError, gps.state.bearing)
+			break
+		case 200: //Loop over contouren + voeg route naar huis toe
+			console.log('case 200')
+			traject = s.mission.data.MissionPlan.MowArea.contour
+			Object.values(s.mission.data.MissionPlan.MowList).forEach(value => {
+				console.log(value)
+				//traject = value
+				let wp_14 = waypoints(value[0][0], value[0][1], value[3][0], value[3][1])
+				let wp_23 = waypoints(value[1][0], value[1][1], value[2][0], value[2][1])
+				let wp_12 = waypoints(value[0][0], value[0][1], value[1][0], value[1][1])
+				let wp_34 = waypoints(value[2][0], value[2][1], value[3][0], value[3][1])
+				if (s.mission.data.MissionPlan.MowArea.type == "parallel") {
+					pathSection = path(wp_14,wp_23)
+				} else if(s.mission.data.MissionPlan.MowArea.type == "squared") {
+					pathSection = circlePath(value)	//steeds kleiner wordende vierkanten
+				}
+				socketList.emit('missionPath', pathSection)//teken geel path in map
+				missionPath.push.apply(missionPath, pathSection)// voeg nieuwe array toe aan eerste array
+			})
+			missionPath.push.apply(missionPath, s.mission.data.MissionPlan.HomeRoute)// voeg weg naar home toe
+			socketList.emit('missionPath', s.mission.data.MissionPlan.HomeRoute)//teken route naar huis op map
+			console.log(missionPath)
+			setTimeout(timeout3, 1000, 'Wachttijd RTK Om')
+			s.mission.data.MissionPlan.State = 201
+			break
+		case 201:
+			console.log('case 201')
+			s.mission.data.MissionPlan.State = 202
+			break
+		case 202:// secties samenvoegen
+			console.log('case 202')
+			break
+		case 203:// komt hierin door setTimeout
+			console.log('case 203')
+			//traject = s.mission.data.MissionPlan.MowArea.contour
+			traject = missionPath
+			//s.mission.log += ('||traject103 = ' + traject)//JSON.stringify(traject, null, 4));
+			//traject.unshift(s.mission.data.MissionPlan.MowArea.start)//startpunt mowarea toevoegen aan begin traject
+			//s.mission.data.MissionPlan.MowArea.start.lon = s.mission.data.MissionPlan.MowArea.start.lng
+			//s.mission.data.MissionPlan.MowArea.start.n = "MowAreaStart"
+			//socketList.emit('targetA', s.mission.data.MissionPlan.MowArea.start)
+			//setTimeout(timeout2, 2000, 'Tijd Om')// // wacht tot RTK beetje stabiel is en roept functie timeout aan onderaan
+			s.mission.data.MissionPlan.State = 205
+			break
+		case 205:
+			console.log('in case 205')
+			latlng[0] = gps.position.pos[0]
+			latlng[1] = gps.position.pos[1]
+			//latlng.n = "huidige positie"
+			latlng[2] = "huidige positie"
+			socketList.emit('targetA', latlng)
+			s.mission.log += ('||Huidige positie = ' + latlng)
+			traject.unshift(latlng) // Voeg huidig punt toe vooraan in array [0]=huidig [1]=A, [2]=B
+			s.mission.log += ('||traject met huidige positie + startpunt MowArea + contour = ' + traject)//JSON.stringify(traject, null, 4));
+			prevTrajectLat = traject[0][0]
+			prevTrajectLon = traject[0][1]
+			trajectLat = traject[1][0]
+			trajectLon = traject[1][1]
+			trajectDistance = 1000 * GPS.Distance(prevTrajectLat, prevTrajectLon, trajectLat, trajectLon); //in meter 
+			s.mission.log += ('||trajectDistance = ' + trajectDistance)
+			target = GPS.intermediatePoint(prevTrajectLat, prevTrajectLon, trajectLat, trajectLon, minDistance * 8 / trajectDistance); //eerste punt ligt 0,8m verder
+			targets.push(target)
+			target.n = targets.length
+			s.mission.target = target
+			s.mission.log += ('||target = ' + JSON.stringify(target, null, 4)) 
+			socketList.emit('target', target)
+			targetLat = target.lat
+			targetLon = target.lon
+			console.log(JSON.stringify(s.mission.log, null, 4))
+
+			s.mission.data.MissionPlan.State = 210
+
+			s.pos.prev.lat = s.data.position.pos[0]
+			s.pos.prev.lon = s.data.position.pos[1]
+			break
+		case 210:
+			console.log('case 210')
+			if (s.pos.prev.lat !== null && s.pos.prev.lon !== null) {
+				if (s.pos.prev.lat !== s.data.position.pos[0]) { //was gps.state.lat
+						s.pos.temp.lat = s.data.position.pos[0]; //(1 - alpha) * data.position.pos[0] + alpha * prev.lat; // smoothed    //was gps.state.lat  // Nieuwe positie berekend
+						s.pos.temp.lon = s.data.position.pos[1]; //(1 - alpha) * data.position.pos[1] + alpha * prev.lon;// was gps.state.lon
+						
+						if (positions.length == 0) {
+								positions.push(s.pos.temp.lat, s.pos.temp.lon);
+						};
+						if (positions.length) {               
+								s.distance1 = GPS.Distance(s.pos.temp.lat, s.pos.temp.lon, positions[0], positions[1]) * 1000; //km naar meter
+								gps.state.bearing = GPS.Heading(positions[0], positions[1], s.pos.temp.lat, s.pos.temp.lon); //geeft waarde van 0 tot 360
+								if (gps.state.bearing > 180) gps.state.bearing -= 360;
+								if (gps.state.bearing < -180) gps.state.bearing += 360;
+								if (s.distance1 > s.pos.minDistance) { //als de nieuwe positie meer dan 0.1m weg is van het vorige punt=> bereken de richting
+										//if (s.debugGPS) {
+												console.log('gps bearing gezet op : %s', gps.state.bearing);
+										//}
+										positions[0] = s.pos.temp.lat; // positions bevat de oude positie
+										positions[1] = s.pos.temp.lon;
+								}
+								//else {console.log('fout')}
+						}
+				} else { console.log('s.pos.prev.lat gelijk aan s.data.prev.lon')}
+			}
+			targetDistance = 1000 * GPS.Distance(gps.position.pos[0], gps.position.pos[1], targetLat, targetLon) //in meter
+			
+			if (targetDistance < (minDistance * 5)) {//was 3
+				// bijna aan target
+				trajectDistance = 1000 * GPS.Distance(prevTrajectLat, prevTrajectLon, trajectLat, trajectLon) //in meter
+				if (trajectDistance < (minDistance * 6)) { // was 15
+					// bijna aan trajectpunt => neem het volgende trajectpunt. Als aan laatste punt, rij terug naar het eerste
+					if (n <= traject.length) {
+						n++;
+					} else {
+						//n = 1;// keer terug naar eerste punt
+						s.mission.data.MissionPlan.State = 215
+					};
+					//io.emit('log', 'traject['+n+'].lat = ' + traject[n].lat );
+					prevTrajectLat = trajectLat;
+					prevTrajectLon = trajectLon;
+					trajectLat = traject[n][0]//.lat;
+					trajectLon = traject[n][1]//.lng;
+
+					trajectDistance = 1000 * GPS.Distance(prevTrajectLat, prevTrajectLon, trajectLat, trajectLon); //in meter
+					if (trajectDistance == 0) {
+						s.autoMow = 0;
+						return
+					}
+					//io.emit('log', 'traject '+ n + ' prev= '+ prevTrajectLat + ', ' + prevTrajectLon +' nieuw='+ trajectLat + ', ' + trajectLon + ' minDistance '+ minDistance +' trajectDistance =' + trajectDistance);
+					target = GPS.intermediatePoint(prevTrajectLat, prevTrajectLon, trajectLat, trajectLon, minDistance * 8 / trajectDistance); //was 3
+					//socketList.emit('target', target)//werkt niet?
+					//io.emit('log', 'target1' + JSON.stringify(target, null, 4));
+					targetLat = target.lat;
+					targetLon = target.lon;
+				} else { //we zijn nog ver van trajectpunt weg dus bereken een tussenpunt
+					prevTrajectLat = targetLat;
+					prevTrajectLon = targetLon;
+					target = GPS.intermediatePoint(prevTrajectLat, prevTrajectLon, trajectLat, trajectLon, minDistance * 10 / trajectDistance); //was 4
+					//socketList.emit('target', target)
+					//io.emit('log', 'target2 '+ n + ' prev= '+ prevTrajectLat + ', ' + prevTrajectLon +' nieuw='+ trajectLat + ', ' + trajectLon + ' minDistance '+ minDistance +' trajectDistance =' + trajectDistance);    
+					targetLat = target.lat
+					targetLon = target.lon
+					//io.emit('log', 'target2' + JSON.stringify(target, null, 4));
+				};
+				if (target.lat !== null) {
+					//io.emit('log', target.lat)
+					targets.push(target)
+					target.n = targets.length
+					socketList.emit('target', target)
+				}
+			}
+			s.targetHeading = GPS.Heading(gps.position.pos[0], gps.position.pos[1], targetLat, targetLon); //geeft een waarde van 0 tot 360 graden
+			//console.log('targetHead ==> %s', s.targetHeading)
+			if (s.targetHeading > 180) s.targetHeading -= 360;
+			if (s.targetHeading < -180) s.targetHeading += 360;
+			s.angleError = s.targetHeading - gps.state.bearing;
+			if (s.angleError > 180) s.angleError -= 360;
+			if (s.angleError < -180) s.angleError += 360;
+			//	console.log('gps = ' + JSON.stringify(gps, null, 4));
+			console.log('=> targetHeading = %s, => angleError = %s, => bearing = %s ', s.targetHeading, s.angleError, gps.state.bearing)
+			break
+		case 215: //gedaan met maaien
+			console.log('In case 215: maaien gedaan')
+			socketList.emit('targetA', s.mission.data.MissionPlan.MowArea.start)
+			s.mission.active = false
+			break
+	}	
+}
+function timeout(arg) { // wacht to RTK beetje stabiel is
+	console.log(`arg was => ${arg}`)
+	s.mission.data.MissionPlan.State = 5 //was 5
+}
+function timeout2(arg) { // wacht to RTK beetje stabiel is
+	console.log(`arg was => ${arg}`)
+	s.mission.data.MissionPlan.State = 103 //was 5
+}
+function timeout3(arg) { // wacht to RTK beetje stabiel is
+	console.log(`arg was => ${arg}`)
+	s.mission.data.MissionPlan.State = 203 //was 5
+}
+function waypoints(lat1,lon1,lat2,lon2) {
+	let wp = []
+	let ds = 0.5 //is the distance between waypoints which correspond to blade width We use 1 meter as the blade is 110cm.
+	let l = geod.InverseLine(lat1, lon1, lat2, lon2)
+	//console.log('l = ', l)
+	let n = Math.round(Math.ceil(l.s13 / ds))
+	//console.log('n = ', n)
+	for (let i=0; i<n+1 ; i++){// in range(n+1):
+			if (i === 0) {
+					//console.log("distance latitude longitude")
+			}
+			let s = Math.min(ds * i, l.s13)
+			//console.log('s = ', s)
+			let g = l.Position(s, GeographicLib.Geodesic.STANDARD | GeographicLib.Geodesic.LONG_UNROLL)
+			wp.push([g['lat2'], g['lon2']])
+			//console.log('%s %s %s',g['s12'].toFixed(0), g['lat2'].toFixed(6), g['lon2'].toFixed(6))
+			//console.log(wp)
+	}
+	return wp
+}
+
+function path(wp14, wp23) {// stroken heen en terug met bocht 180°
+	//console.log('Navigation path coordinates: ')
+	let count14 = 0,
+			count23 = 0,
+			is14 = true,
+			pathList = []
+  console.log('wp lengths 1-4 : %s, 2-3 : %s , min : %s', wp14.length , wp23.length, Math.min(wp14.length, wp23.length))
+	for (let i=0; i<Math.min(wp14.length, wp23.length)-1;i++) {
+	    if (is14) {
+        if (count14 != 0) {
+            pathList.push(wp14[count14])
+            console.log('WP14-%s  %s , %s', count14, wp14[count14][0], wp14[count14][1])
+						count14 += 1
+				}
+        pathList.push(wp14[count14])
+        console.log('WP14-%s  %s , %s', count14, wp14[count14][0], wp14[count14][1])
+        count14 += 1
+				is14 = false
+		}
+    else {
+            pathList.push(wp23[count23])
+            console.log('WP23-%s  %s , %s', count23, wp23[count23][0], wp23[count23][1])
+            count23 +=1
+            pathList.push(wp23[count23])
+            console.log('WP23-%s  %s , %s', count23, wp23[count23][0], wp23[count23][1])
+            count23 +=1
+						is14 = true
+		}
+		console.log('i: %s, count14: %s, count23: %s', i, count14, count23)
+	}
+	return pathList
+}
+
+function circlePath(traject) { //Steeds kleiner wordende vierkanten rijden
+	let pathList = []
+	let wp_14 = waypoints(traject[0][0], traject[0][1], traject[3][0], traject[3][1])
+	let wp_41 = waypoints(traject[3][0], traject[3][1], traject[0][0], traject[0][1])
+	let wp_23 = waypoints(traject[1][0], traject[1][1], traject[2][0], traject[2][1])
+	let wp_32 = waypoints(traject[2][0], traject[2][1], traject[1][0], traject[1][1])
+	let wp_12 = waypoints(traject[0][0], traject[0][1], traject[1][0], traject[1][1])
+	let wp_34 = waypoints(traject[2][0], traject[2][1], traject[3][0], traject[3][1])
+	let turns = [wp_12.length, wp_23.length, wp_34.length, wp_41.length]
+	turns.sort(function(a,b){return a-b})
+	console.log(turns)
+	//console.log('12_lengte =%s, 23_length=%s, 34_lengte=%s, 41_length=%s',wp_12.length, wp_23.length, wp_34.length, wp_41.length)
+	//for (let i=0; i<Math.floor((Math.max(wp_12.length, wp_23.length, wp_34.length, wp_41.length)/4+1)); i++) {
+		for (let i=0; i<turns[1]/2; i++) {
+	  pathList.push(wp_14[0])
+		pathList.push(wp_23[0])
+		pathList.push(wp_32[0])
+		pathList.push(wp_41[0])
+		pathList.push(wp_14[1])
+		let wp_56 = waypoints(wp_14[1][0], wp_14[1][1], wp_23[1][0], wp_23[1][1])
+		let wp_65 = waypoints(wp_23[1][0], wp_23[1][1], wp_14[1][0], wp_14[1][1])
+		let wp_78 = waypoints(wp_32[1][0], wp_32[1][1], wp_41[1][0], wp_41[1][1])
+		let wp_87 = waypoints(wp_41[1][0], wp_41[1][1], wp_32[1][0], wp_32[1][1])
+
+		wp_14 = waypoints(wp_56[1][0], wp_56[1][1], wp_87[1][0], wp_87[1][1])
+		wp_41 = waypoints(wp_87[1][0], wp_87[1][1], wp_56[1][0], wp_56[1][1])
+		wp_23 = waypoints(wp_65[1][0], wp_65[1][1], wp_78[1][0], wp_78[1][1])
+		wp_32 = waypoints(wp_78[1][0], wp_78[1][1], wp_65[1][0], wp_65[1][1])
+	}
+	return pathList
+}
+
+/**
+  * Returns the destination point from a given point, having travelled the given distance
+  * on the given initial bearing.
+  *
+  * @param   {number} lat - initial latitude in decimal degrees (eg. 50.123)
+  * @param   {number} lon - initial longitude in decimal degrees (e.g. -4.321)
+  * @param   {number} distance - Distance travelled (metres).
+  * @param   {number} bearing - Initial bearing (in degrees from north).
+  * @returns {array} destination point as [latitude,longitude] (e.g. [50.123, -4.321])
+  *
+  * @example
+  *     var p = destinationPoint(51.4778, -0.0015, 7794, 300.7); // 51.5135°N, 000.0983°W
+  */
+ function destinationPoint(lat, lon, distance, bearing) {
+	var radius = 6371e3; // (Mean) radius of earth
+
+	var toRadians = function(v) { return v * Math.PI / 180; };
+	var toDegrees = function(v) { return v * 180 / Math.PI; };
+
+	// sinφ2 = sinφ1·cosδ + cosφ1·sinδ·cosθ
+	// tanΔλ = sinθ·sinδ·cosφ1 / cosδ−sinφ1·sinφ2
+	// see mathforum.org/library/drmath/view/52049.html for derivation
+
+	var δ = Number(distance) / radius; // angular distance in radians
+	var θ = toRadians(Number(bearing));
+
+	var φ1 = toRadians(Number(lat));
+	var λ1 = toRadians(Number(lon));
+
+	var sinφ1 = Math.sin(φ1), cosφ1 = Math.cos(φ1);
+	var sinδ = Math.sin(δ), cosδ = Math.cos(δ);
+	var sinθ = Math.sin(θ), cosθ = Math.cos(θ);
+
+	var sinφ2 = sinφ1*cosδ + cosφ1*sinδ*cosθ;
+	var φ2 = Math.asin(sinφ2);
+	var y = sinθ * sinδ * cosφ1;
+	var x = cosδ - sinφ1 * sinφ2;
+	var λ2 = λ1 + Math.atan2(y, x);
+
+	return [toDegrees(φ2), (toDegrees(λ2)+540)%360-180]; // normalise to −180..+180°
+}
+
+function getPerp( X1, Y1, X2, Y2, X3, Y3) {
+    /************************************************************************************************ 
+    Purpose - X1,Y1,X2,Y2 = Two points representing the ends of the line segment
+              X3,Y3 = The offset point 
+    'Returns - X4,Y4 = Returns the Point on the line perpendicular to the offset or None if no such
+                        point exists
+    ************************************************************************************************/
+    let XX = X2 - X1 
+    let YY = Y2 - Y1 
+    let shortestLength = ((XX * (X3 - X1)) + (YY * (Y3 - Y1))) / ((XX * XX) + (YY * YY)) 
+    let X4 = X1 + XX * shortestLength 
+    let Y4 = Y1 + YY * shortestLength
+    if (X4 < X2 && X4 > X1 && Y4 < Y2 && Y4 > Y1) {
+				return [X4,Y4,shortestLength]
+		}
+		return 'None'
+}

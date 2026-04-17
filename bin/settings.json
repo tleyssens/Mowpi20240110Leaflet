@@ -1,0 +1,245 @@
+{
+  "driveEnable": false,
+  "GUI": {
+    "INFO": "info",
+    "Autosteer": false,
+    "MaaiMES": false,
+    "LM": 0,
+    "RM": 0,
+    "angleError": null,
+    "angleIMU": 0,
+    "speedometer": {
+      "heading": 5
+    },
+    "contour": {
+      "fileList": [],
+      "isRecordOn": false
+    },
+    "gps": null,
+    "mission": {
+      "active": false
+    },
+    "mf": {
+      "isAutoSteerBtnOn": false,
+      "isPurePursuitUsed": true,
+      "tool": {
+        "toolWidth": 0.5,
+        "toolOverlap": 0,
+        "toolOffset": 0
+      },
+      "vehicle": {
+        "goalPointLookAhead": 0.6,
+        "goalPointLookAheadMult": 1.5,
+        "stanleyHeadingErrorGain": 1,
+        "stanleyDistanceErrorGain": 1,
+        "stanleyIntegralGainAB": 1,
+        "maxSteerAngle": 60,
+        "wheelbase": 0.65,
+        "purePursuitIntegralGain": 0.5,
+        "purePursuitIntegralGainMinMax0-1": 0.5,
+        "wheelbase_In" : "m"
+      }
+    },
+    "targetHeading": null,
+    "NMEA": {
+      "choice": "NMEA bron1",
+      "state": false
+    },
+    "quality": 5,
+    "pos": {
+      "prev": {
+        "lat": null,
+        "lon": null
+      },
+      "temp": {
+        "lat": null,
+        "lon": null
+      },
+      "target": {
+        "lat": null,
+        "lon": null
+      },
+      "minDistance": 0.05
+    }
+  },
+  "AS": {
+    "state": 0
+  },
+  "gpsHz": 10,
+  "plaats": "pa",
+  "motortype": "Hbrug",
+  
+  
+  "UDP": {
+    "gpsPort": "9999",
+    "simPort": "9998"
+  },
+  "MaaiMES": false,
+  "MAXBOUNDARIES": 6,
+  "simulatie": {
+    "state": true,
+    "type": 3,
+    "type aangepast op 20210221van 2 naar 3": "info",
+    "degrees": 10,
+    "speed": 0.5,
+    "speedOud": 0.5
+  },
+  "pid": {
+    "kp": 0.8,
+    "ki": 0.001,
+    "kd": 0.4,
+    "imax": 25,
+    "target": 0,
+    "kpOud": 2,
+    "kiOud": 0.1,
+    "kdoud": 0.15,
+    "imaxOud": 45
+  },
+  "debugDrive": false,
+  "debugGPS": false,
+  "debugPID": false,
+  "Rmin": 0.4,
+  "laSec": 2,
+  "laMul": 1,
+  "laMin": 0.2,
+  "autoMow": 0,
+  "prevAutoMow": 0,
+  "autoMow1": 0,
+  "autoMow2": false,
+  "autoMow3": false,
+  "autoMowSpeed": 255,
+  "autoMowBochtSpeedBuitensteWiel": 210,
+  "autoMowBochtSpeedBinnensteWiel": 130,
+  "bat": 0,
+  "mesStop": 0,
+  "back": 0,
+  "side": "",
+  "L": false,
+  "R": false,
+  "t1": null,
+  "t2": null,
+  "t3": null,
+  "t4": null,
+  "uTurn": false,
+  "uTurnDir": "R",
+  "minTurningRadius": 50,
+  "maaiBreedte": 500,
+  "maaiOverlap": 5,
+  "ABLine": {
+    "set": false,
+    "heading": 90,
+    "lat": 0,
+    "lon": 0,
+    "A": {
+      "northing": 0.015,
+      "easting": 0.001
+    },
+    "B": {
+      "northing": 13.564674548957216,
+      "easting": 1.1899409146465938
+    },
+    "rEastAB": 0,
+    "rNorthAB": 0
+  },
+  "tom is start1 ": "Pa is start2 richting tom was 5",
+  "start1": { "lat": 50.996328535, "lng": 5.3881682516666665, "richting": 90 },
+  "start2": {
+    "lat": 51.05035973468406,
+    "lng": 5.304913864941736,
+    "richting": -15
+  },
+  "mission": {
+    "log": "log",
+    "active": false,
+    "prevState": false,
+    "fileName": "",
+    "data": {
+      "MissionPlan": {
+        "State": 200,
+        "GetRTK": {
+          "delay": 30,
+          "lat": null,
+          "lon": null,
+          "executed": false
+        },
+        "MowArea": {
+          "type": "squared",
+          "type_posibilitys": "parallel or squared",
+          "ABLine": {
+            "heading": -15,
+            "isABLineSet": true
+          },
+          "start": [50.996354373684916, 5.388108742518116],
+          "contour": [
+            [51.05039185253974, 5.304873400279795],
+            [51.0503981755451, 5.305092670866762],
+            [51.05054571209161, 5.30502561564139],
+            [51.05049512818575, 5.30480701560667]
+          ],
+          "stop": [51.05035897289798, 5.305085294791971]
+        },
+        "MowList": {
+          "contour1": [
+            [50.99633833671833, 5.388111424727131],
+            [50.996320611643576, 5.388112765831639],
+            [50.996329052156206, 5.388248217386891],
+            [50.9963509974819, 5.3882629695364725]
+          ]
+        },
+        "HomeRoute": [[50.996340024820356, 5.388130200190235]],
+        "GoHomeOUD": {
+          "lat": 50,
+          "lng": 5
+        }
+      }
+    }
+  },
+  "contour": {
+    "fileListStr": "",
+    "prevInside": true,
+    "prevPos": { "lat": 0, "lng": 0 },
+    "TriggerDistance": 0.5,
+    "recListTom": [
+      { "lat": 50.99645206234544, "lng": 5.388025053595205 },
+      { "lat": 50.99646510020556, "lng": 5.388205845885143 },
+      { "lat": 50.996378576155045, "lng": 5.388217145410938 },
+      { "lat": 50.99636, "lng": 5.388045 }
+    ],
+    "recListPa": [
+      { "lat": 51.05033831772649, "lng": 5.305010863491808 },
+      { "lat": 51.050443701158166, "lng": 5.3049283855646 },
+      { "lat": 51.05048142836842, "lng": 5.305075571784292 },
+      { "lat": 51.050338739260695, "lng": 5.305129551240717 },
+      { "lat": 51.050334945452704, "lng": 5.305105411359583 },
+      { "lat": 51.05035897289798, "lng": 5.305085294791971 }
+    ],
+    "recList": []
+  },
+  "recPath": {
+    "isRecordOn": false,
+    "prevPos": { "lat": 0, "lng": 0 },
+    "TriggerDistance": 0.5,
+    "recList": []
+  },
+  "mf": {
+    "isAutoSteerBtnOn": false,
+    "isPurePursuitUsed": true,
+    "tool": {
+      "toolWidth": 0.5,
+      "toolOverlap": 0,
+      "toolOffset": 0
+    },
+    "vehicle": {
+      "goalPointLookAhead": 0.5,
+      "goalPointLookAheadMult": 1,
+      "stanleyHeadingErrorGain": 1,
+      "stanleyDistanceErrorGain": 1,
+      "stanleyIntegralGainAB": 1,
+      "maxSteerAngle": 45,
+      "wheelbase": 0.65,
+      "purePursuitIntegralGain": 1.5,
+      "purePursuitIntegralGainMinMax0-1": 0.5,
+      "wheelbase_In" : "m"
+    }
+  }
+}

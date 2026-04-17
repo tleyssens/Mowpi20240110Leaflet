@@ -1,0 +1,21 @@
+extends dataviewLayout
+
+block content
+  //cc:MapUI#1;Layout opzetten
+  //h1= s.driveEnable
+  //p Welcome to #{title}
+  #quality {{qualitydata}}
+  .row
+    //button(type='button' id='RPiAfsluiten' class='btn btn-primary') RPI afsluiten
+  #targetDist {{targetDist}}
+  //#NMEA
+  .form-group
+    label(for='exampleFormControlTextarea2') NMEA data
+    textarea(class='form-control rounded-0' id='NMEA' rows="5") {{gpsData}}
+  .form-group
+    label(for='exampleFormControlTextarea3') settings data
+    textarea(class='form-control rounded-0' id='settings' rows="10") {{settingsdata}}
+  #dialog(style="display:none;")
+    input(type="file" nwsaveas)
+  p IMU
+  canvas(id="mycanvas" width="500" height="300")

@@ -1,0 +1,116 @@
+
+const split = require('split')
+//const serialPort = require('serialport') //werkt
+const SerialPort = require('@serialport/stream')
+const Binding = require('@serialport/bindings')
+const readLine = require('@serialport/parser-readline')
+const nmeaSim = require('./NMEAsimTom.js')
+const {
+    exec
+  } = require('child_process');
+const { spawn } = require("child_process");
+ 
+const util = require("util");
+const execProm = util.promisify(exec);
+const net = require('net');
+const client = new net.Socket();
+
+exports.getStream = function (s) {
+    switch (s.NMEA.choice) {
+        case "GPS":
+            console.log('get seriele poortstream')
+            const port = new SerialPort ('/dev/ttyUSB1', {
+                baudRate: 115200
+            })
+            // var stream = port.pipe(new readLine({
+            //                                     delimiter: '\n',
+            //                                      encoding: 'utf8'
+            //      })) werkt ook
+            //var stream = port.pipe(split('\r\n'))     20200729
+            //return stream
+            return port                               //20200729
+            break
+        //cc:Simulatie#;
+        case "Simulatie":
+            console.log("get simulatiestream")
+            const nmeaSimStream = new nmeaSim(200)
+            //stream = nmeaSimStream.pipe(split('\r\n'))    20200729
+            //return stream
+            return nmeaSimStream
+            break
+        case "File":
+            console.log("get filestream")
+            
+            var os = new os_func();
+            os.execCommand('pkill -9 str2str', function (returnvalue) { console.log('pkill str2str: ' + returnvalue)});
+            os.execCommand('../rtk/str2str -in ../rtk/LogThuis1.ntrip::T::x1::+330 -out tcpsvr://:52000', function (returnvalue) {});
+            client.connect(52000, '127.0.0.1', function () {
+                console.log('nmea-client connected');
+                //io.emit('log', 'Connected to NS-HP-output');
+            }); //client krijgt constant data van de str2str naar poort 52000
+            //var stream = client.pipe(split('\r\n'));      20200729
+            //return stream ;
+            return client
+            break
+        default:
+            return 'allert'
+    }
+}
+function os_func() {
+    this.execCommand = function (cmd, callback) {
+        exec(cmd, (err, stdout, stderr) => {
+            if (err) {
+                console.log('error str2str' + err);
+                //io.emit('log', err);
+                return;
+            }
+            callback(stdout);
+        });
+    };
+};
+
+function startNtrip() {
+    console.log('ntrip starten')
+    //var os = new os_func();
+    //os.execCommand('./startFlepos.sh', function (returnvalue) { console.log('ntrip fout: ' + returnvalue)})//'str2str -in ntrip://89777a001:46544@flepos.vlaanderen.be:2101/FLEPOSVRS31GR#rtcm3 -out serial://ttyUSB0:57600:8:n:1:off -out tcpsvr://:5000 -p 51.01777649 5.37416649 103.00 -s 100000 -n 5000' , function (returnvalue) { console.log('ntrip fout: ' + returnvalue)});
+    const { execFile } = require('child_process');
+    const child = execFile('./startFlepos.sh', [], (error, stdout, stderr) => {
+        if (error) {
+            throw error;
+        }
+        //console.log(stdout);
+    });
+    console.log(child.pid)
+    //run_shell_command("./startFlepos.sh")//str2str -in ntrip://89777a001:46544@flepos.vlaanderen.be:2101/FLEPOSVRS31GR#rtcm3 -out serial://ttyUSB0:57600:8:n:1:off -out tcpsvr://:5000 -p 51.01777649 5.37416649 103.00 -s 100000 -n 5000").then( res => console.log(res) );
+    //const ls = spawn("str2str", [" -in ntrip://89777a001:46544@flepos.vlaanderen.be:2101/FLEPOSVRS31GR#rtcm3 -out serial://ttyUSB0:57600:8:n:1:off -out tcpsvr://:5000 -p 51.01777649 5.37416649 103.00 -s 100000 -n 5000"])
+    // ls.stdout.on("data", data => {
+    //     console.log(`stdout: ${data}`);
+    // });
+    
+    // ls.stderr.on("data", data => {
+    //     console.log(`stderr: ${data}`);
+    // });
+    
+    // ls.on('error', (error) => {
+    //     console.log(`error: ${error.message}`);
+    // });
+    
+    // ls.on("close", code => {
+    //     console.log(`child process exited with code ${code}`);
+    // });
+    return(child.pid)
+}
+
+async function run_shell_command(command) {
+    let result;
+    console.log('in run shell command : ' + command)
+    try {
+        result = await execProm(command);
+    } catch(ex) {
+        result = ex;
+    }
+    if ( Error[Symbol.hasInstance](result) )
+        return ;
+
+    return result;
+}

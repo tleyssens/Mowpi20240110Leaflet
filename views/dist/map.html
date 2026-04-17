@@ -1,0 +1,1401 @@
+<!DOCTYPE html>
+<html></html>
+<head>
+  <title> </title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.4.0/css/font-awesome.min.css">
+  <link rel="stylesheet" href="/stylesheets/style.css">
+  <!--link(rel="stylesheet" href='/stylesheets/jsoneditor.min.css')-->
+  <script src="/socket.io/socket.io.js"></script>
+  <link rel="stylesheet" href="/stylesheets/bootstrap.min.css">
+  <!--link(href='/navbar-top.css', rel='stylesheet')-->
+  <!--script(src='/javascripts/index.js')-->
+</head>
+<link rel="stylesheet" href="/stylesheets/leaflet.css">
+<script src="/javascripts/leaflet-src.js"></script>
+<script type="text/javascript" src="/javascripts/virtualjoystick.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.14/d3.js"></script>
+<script src="javascripts/moment2_24_0.min.js"></script>
+<script src="javascripts/chart2_8_0.js"></script>
+<!--script(src="javascripts/chart2_9_3.js") //geeft stortterend beeld-->
+<script src="javascripts/chartjs-plugin-streaming1_8_0"></script>
+<script src="https://unpkg.com/vue@2.6.14/dist/vue.js"></script>
+<!--script(src="javascripts/NMEAsimTom.js")-->
+<!--script(src="javascripts/jsoneditor.min.js")-->
+<body onload="initMap()">
+  <nav class="navbar navbar-expand-sm navbar-dark bg-dark"><a class="navbar-brand" href="/">MowPi </a>
+    <button class="btn btn-secondary" id="reset">Reset</button>
+    <div class="dropdown"></div>
+    <button class="btn btn-secondary dropdown-toggle col-sm-1" id="contourDD" data-bs-toggle="dropdown" aria-expanded="false">Contour</button>
+    <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton"><a class="dropdown-item" href="#" id="contourOpnemen">Opnemen</a>
+      <!--a.dropdown-item(href='#' id='contourOpenen') Openen--><a class="dropdown-item" href="#" id="contourOpenen" data-bs-toggle="modal" data-bs-target="#ContourOpenen">Openen</a><a class="dropdown-item" href="#" id="contourTonen">Tonen</a><a class="dropdown-item" href="#" id="contourOplaan">Opslaan</a><a class="dropdown-item" href="#" id="contourWissen">Wissen</a>
+    </ul>
+    <div class="form-check form-switch col-sm-1">
+      <input class="form-check-input" type="checkbox" id="customSwitchDriveEnable">
+      <label class="form-check-label text-white" for="customSwitchDriveEnable">Drive Enable</label>
+    </div>
+    <div class="form-check form-switch col-sm-1">
+      <input class="form-check-input" type="checkbox" id="customSwitchTest">
+      <label class="form-check-label text-white" for="customSwitchTest">Slow Test</label>
+    </div>
+    <div class="form-check form-switch col-sm-1">
+      <input class="form-check-input" type="checkbox" id="customSwitchAutoMow">
+      <label class="form-check-label text-white" for="customSwitchAutoMow">Automatisch</label>
+    </div>
+    <div class="form-check form-switch col-sm-1">
+      <input class="form-check-input" type="checkbox" id="customSwitchMes">
+      <label class="form-check-label text-white" for="customSwitchMes">MES</label>
+    </div>
+    <div class="nav-item dropdown"><a class="nav-link dropdown-toggle" role="button" href="#" id="NMEAsource" data-bs-toggle="dropdown">NMEA bron</a>
+      <div class="dropdown-menu"><a class="dropdown-item" href="#" id="keuzeGPS">GPS</a><a class="dropdown-item" href="#" id="keuzeGPSudp">GPSudp</a><a class="dropdown-item" href="#" id="keuzeGPSSimulatie">GPS Simulatie</a><a class="dropdown-item" href="#" id="keuzeGPSudpSimulatie">GPSudp Simulatie</a><a class="dropdown-item" href="#" id="keuzeFile">File</a></div>
+    </div>
+    <div class="form-check form-switch col-sm-1">
+      <input class="form-check-input" type="checkbox" id="customSwitchNMEA">
+      <label class="form-check-label text-white" for="customSwitchNMEA">NMEA</label>
+    </div>
+    <div class="form-check form-switch col-sm-1">
+      <input class="form-check-input" type="checkbox" id="customSwitchAutosteer">
+      <label class="form-check-label text-white" for="customSwitchAutosteer">Autosteer</label>
+    </div>
+    <div class="form-check form-switch col-sm-1">
+      <input class="form-check-input" type="checkbox" id="customSwitchMission">
+      <label class="form-check-label text-white" for="customSwitchMission">Mission</label>
+    </div>
+    <div class="form-check form-switch col-sm-1">
+      <input class="form-check-input" type="checkbox" id="customSwitchLog">
+      <label class="form-check-label text-white" for="customSwitchLog">Logs</label>
+    </div>
+  </nav>
+  <form class="inputForm">
+    <div class="inputbox">
+      <label>mission</label>
+      <input id="mission_input" type="text" required>
+    </div>
+  </form>
+  <div class="modal fade" id="ContourOpenen" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <!--form(action='/map#' method='POST')-->
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="exampleModalLabel">Kies contourbestand</h5>
+          <button class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p id="fileList"></p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button><a class="button btn btn-primary" id="LoadMission">Load Mission</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!--cc:MapUI#1;Layout opzetten-->
+  <!--h1= s.driveEnable-->
+  <!--p Welcome to #{title}-->
+  <div class="row">
+    <div class="col-sm-3">
+      <div id="quality">{{qualitydata}}</div>
+    </div>
+    <div class="col-sm-3">
+      <div id="waypoint">{{waypointdata}}</div>
+    </div>
+    <div class="col-sm-3">
+      <div id="goalPointDistance">{{goalPointDistancedata}}  </div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-sm-9">
+      <div id="map" style="height:400px;width:100%;"></div>
+      <!--#leafletMap(style="height:400px;width:100%;")-->
+    </div>
+    <div class="col-sm-3">
+      <div id="containerMain"></div>
+      <div id="joystickResult"></div>
+      <!--button(type='button' id='RPiAfsluiten' class='btn btn-primary') RPI afsluiten-->
+      <!--button(type='button' id='simulatie' class='btn btn-primary') Simulatie-->
+      <input type="range" id="SpeedSlider" min="0" max="255" value="255">
+      <p>Speed: <span id="SpeedSliderValue"> </p>
+    </div>
+  </div>
+  <div class="row"> 
+    <div class="col-sm-3">
+      <input type="range" id="Pslider" min="0" max="10000" value="2000">
+      <p>P Value: <span id="Pvalue"></p>
+    </div>
+    <div class="col-sm-3">
+      <input type="range" id="Islider" min="0" max="3000" value="100">
+      <p>I Value: <span id="Ivalue"></p>
+    </div>
+    <div class="col-sm-3">
+      <input type="range" id="Dslider" min="0" max="3000" value="150">
+      <p>D Value: <span id="Dvalue"></p>
+    </div>
+    <div class="col-sm-3">
+      <input type="range" id="pureSlider" min="0" max="10000" value="0">
+      <p>PurePursuit Value: <span id="pureValue"></p>
+    </div>
+    <div id="targetDist">{{targetDist}}</div>
+    <div class="container">
+      <div class="text-center"><span class="label">pause:<span class="value" id="pauseValue">false</span>
+          <input class="control" type="checkbox" id="pause"></span></div>
+    </div>
+  </div>
+  <canvas id="myChart"></canvas>
+  <div class="dropdown"></div>
+  <button class="btn btn-secondary dropdown-toggle col-sm-1" id="grafiekDD" data-bs-toggle="dropdown" aria-expanded="false">Grafiek Openen</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+    <!--a.dropdown-item(href='#' id='contourOpenen') Openen--><a class="dropdown-item" href="#" id="grafiek1openen" data-bs-toggle="modal" data-bs-target="#GrafiekOpenen1">Grafiek1</a><a class="dropdown-item" href="#" id="grafiek2openen" data-bs-toggle="modal" data-bs-target="#GrafiekOpenen2">Grafiek2</a>
+  </ul>
+  <!--#jsoneditor(style={width: "400px", height: "400px"})//#NMEA
+  -->
+  <div class="form-group">
+    <label for="exampleFormControlTextarea2">NMEA data</label>
+    <textarea class="form-control rounded-0" id="NMEA" rows="4">{{gpsData}}</textarea>
+  </div>
+  <div class="form-group">
+    <label for="exampleFormControlTextarea3">settings data</label>
+    <textarea class="form-control rounded-0" id="settings" rows="25">{{settingsdata}}</textarea>
+  </div>
+  <div id="dialog" style="display:none;">
+    <input type="file" nwsaveas>
+  </div>
+  <script>
+    
+var svgSpeed1 = d3.select("body")//heading
+	.append("svg")
+	.attr("id", "svg1")
+	.style("position", "fixed")
+	.style("left", "200px")
+	.style("bottom", "10px")
+	.attr("width", 160)
+	.attr("height", 160)
+	.append("g");
+var centerX = 80;
+var centerY = 80;
+var path1 = [];
+var path2 = [];
+var start = 270; // °
+var end = -10; // °
+var startH = 0;
+var endH = 9; //45
+var stepH = 1; //5
+var n = (endH - startH);
+
+function speedAngle(i) {
+	return end + (Math.min(i, endH) - endH) / (startH - endH) * (start - end)
+}
+
+for (var i = 0; i <= n; i++) {
+
+	var alpha = (end + start - speedAngle(i)) / 180 * Math.PI;
+	var path = path2;
+	var r = 4;
+
+	if (i % 5 === 0) {
+
+		path = path1;
+		r = 7;
+		svgSpeed1.append("text")
+			.attr("x", Math.cos(alpha) * 60 + centerX - 5)
+			.attr("y", -Math.sin(alpha) * 60 + centerY + 5)
+			.attr("font-weight", "bold")
+			.attr("font-size", "10px")
+			.text(endH - i);
+	}
+
+	path.push("M");
+	path.push(Math.cos(alpha) * (r + 70) + centerX);
+	path.push(-Math.sin(alpha) * (r + 70) + centerY);
+	path.push("L");
+	path.push(Math.cos(alpha) * 70 + centerX);
+	path.push(-Math.sin(alpha) * 70 + centerY);
+}
+
+function arc(x, y, radius, startAngle, endAngle) {
+	var start = {
+		x: x + (radius * Math.cos(endAngle * Math.PI / 180)),
+		y: y - (radius * Math.sin(endAngle * Math.PI / 180))
+	};
+
+	var end = {
+		x: x + (radius * Math.cos(startAngle * Math.PI / 180)),
+		y: y - (radius * Math.sin(startAngle * Math.PI / 180))
+	};
+
+	var a = (startAngle - endAngle) > 180 ? 1 : 0;
+	return [
+		"M", start.x, start.y,
+		"A", radius, radius, 0, a, 0, end.x, end.y
+	].join(" ");
+}
+
+var speed1 = 0;
+var angle1 = 0
+
+var shadowSpeed1 = svgSpeed1.append("path")
+	.attr("d", arc(centerX, centerY, 72, start, speedAngle(speed1)))
+	.attr("fill", "none")
+	.style("stroke-width", "3")
+	.attr("stroke", "rgba(0, 220, 255, 0)");
+
+svgSpeed1.append("path")
+	.attr("d", path1.join(" "))
+	.attr("fill", "none")
+	.style("stroke-width", "2")
+	.attr("stroke", "black");
+
+svgSpeed1.append("path")
+	.attr("d", path2.join(" "))
+	.attr("fill", "none")
+	.attr("stroke", "black");
+
+var direction1 = svgSpeed1.append("path")
+	.attr("d", [
+		"M", Math.cos(Math.PI / 2 + Math.PI) * 5, -Math.sin(Math.PI / 2 + Math.PI) * 5,
+		"L", Math.cos(Math.PI / 4 + Math.PI) * 15, -Math.sin(Math.PI / 4 + Math.PI) * 15,
+		"L", Math.cos(Math.PI / 2) * 20, -Math.sin(Math.PI / 2) * 20,
+		"L", Math.cos(-Math.PI / 4) * 15, -Math.sin(-Math.PI / 4) * 15,
+		"Z"
+	].join(" "))
+	.style("transform", "translate(" + centerX + "px," + centerY + "px)")
+	.attr("fill", "#c00")
+	.attr("stroke", "none");
+
+var circleSpeed1 = svgSpeed1.append("circle")
+	.attr("r", 4)
+	.attr("cx", Math.cos(speedAngle(speed1) / 180 * Math.PI) * 72 + centerX)
+	.attr("cy", -Math.sin(speedAngle(speed1) / 180 * Math.PI) * 72 + centerY)
+	.attr("fill", "white")
+	.style("stroke-width", 2)
+	.attr("stroke", "black");
+
+var textSpeed1 = svgSpeed1.append("text")
+	.attr("x", 90)
+	.attr("y", 140)
+	.attr("font-weight", "bold")
+	.attr("font-size", "30px")
+	.attr("fill", "black")
+	.text(speed1);
+
+var textAngle1 = svgSpeed1.append("text")
+	.attr("x", 40)
+	.attr("y", 115)
+	.attr("font-size", "10px")
+	.attr("fill", "red")
+	.text(angle1);
+
+svgSpeed1.append("text")
+	.attr("x", 95)
+	.attr("y", 155)
+	.attr("font-weight", "bold")
+	.attr("font-size", "13px")
+	.attr("fill", "black")
+	.text("mpm");
+
+svgSpeed1.append("text")
+	.attr("x", centerX - 30 - 4)
+	.attr("y", centerY + 4)
+	.attr("font-weight", "bold")
+	.attr("font-size", "13px")
+	.attr("fill", "black")
+	.text("W");
+
+svgSpeed1.append("text")
+	.attr("x", centerX + 30 - 4)
+	.attr("y", centerY + 4)
+	.attr("font-weight", "bold")
+	.attr("font-size", "13px")
+	.attr("fill", "black")
+	.text("E");
+
+svgSpeed1.append("text")
+	.attr("x", centerX - 4)
+	.attr("y", centerY - 30 + 3)
+	.attr("font-weight", "bold")
+	.attr("font-size", "13px")
+	.attr("fill", "black")
+	.text("N");
+
+svgSpeed1.append("text")
+	.attr("x", centerX - 4)
+	.attr("y", centerY + 30 + 7)
+	.attr("font-weight", "bold")
+	.attr("font-size", "13px")
+	.attr("fill", "black")
+	.text("S");
+
+function updateSpeed(speed1, bearing) { //gpsdata ontvangen 
+	console.log("speed1 = "+ speed1)
+	//let svgSpeed1 = d3.select("#svg1");
+	//te = t1 - Date.now();
+	//t1 = Date.now();
+	//var speed1 = data.speed;
+	//console.log(speed1 + " " + bearing)
+	textSpeed1.text(speed1 + 'm');
+	textAngle1.text(bearing)
+	
+	direction1
+		.style("transform", "translate(" + centerX + "px," + centerY + "px)rotate(" + bearing + "deg)")
+
+	circleSpeed1
+		.attr("cx", Math.cos(speedAngle(speed1) / 180 * Math.PI) * 72 + centerX)
+		.attr("cy", -Math.sin(speedAngle(speed1) / 180 * Math.PI) * 72 + centerY);
+
+	shadowSpeed1
+		.attr("d", arc(centerX, centerY, 72, start, speedAngle(speed1)))
+		.attr("stroke", "rgba(0, 220, 255, " + (speed1 / (endH - startH)) + ")");
+}var svgSpeed2 = d3.select("body")//targetheading
+	.append("svg")
+	.attr("id", "svg2")
+	.style("position", "fixed")
+	.style("left", "200px")
+	.style("bottom", "10px")
+	.attr("width", 160)
+	.attr("height", 160)
+	.append("g");
+var centerX2 = 80;
+var centerY2 = 80;
+var path1 = [];
+var path2 = [];
+var start = 270; // °
+var end = -10; // °
+var startH = 0;
+var endH = 9; //45
+var stepH = 1; //5
+var n = (endH - startH);
+var angle = 0
+var offset = 0
+var pathsAway = 0
+/*
+function speedAngle(i) {
+	return end + (Math.min(i, endH) - endH) / (startH - endH) * (start - end)
+}
+*/
+var speed2 = 0;
+var direction2 = svgSpeed2.append("path")
+	.attr("d", [
+		"M", Math.cos(Math.PI / 2 + Math.PI) * 5, -Math.sin(Math.PI / 2 + Math.PI) * 5,
+		"L", Math.cos(Math.PI / 4 + Math.PI) * 25, -Math.sin(Math.PI / 4 + Math.PI) * 25,//was 15
+		"L", Math.cos(Math.PI / 2) * 25, -Math.sin(Math.PI / 2) * 25,
+		"L", Math.cos(-Math.PI / 4) * 25, -Math.sin(-Math.PI / 4) * 25,
+		"Z"
+	].join(" "))
+	.style("transform", "translate(" + centerX2 + "px," + centerY2 + "px)")
+	.attr("fill", "#0C0")
+	.attr("stroke", "none");
+
+var textAngle = svgSpeed2.append("text")
+	.attr("x", 90)
+	.attr("y", 115)
+	.attr("font-size", "10px")
+	.attr("fill", "green")
+	.text(angle);
+
+var textOffset = svgSpeed2.append("text")
+	.attr("x", 80)
+	.attr("y", 40)
+	.attr("font-size", "10px")
+	.attr("fill", "black")
+	.text(offset)
+
+svgSpeed2.append("text")
+	.attr("x", 110)
+	.attr("y", 40)
+	.attr("font-size", "8px")
+	.text("path")
+var textPathsAway = svgSpeed2.append("text")
+	.attr("x", 115)
+	.attr("y", 50)
+	.attr("font-size", "10px")
+	.attr("fill", "black")
+	.text(pathsAway)
+
+function updateSpeed2(targetHeading, offset, pathsAway) { //targetHeading ontvangen 
+	textAngle.text(targetHeading)
+	textOffset.text(offset)
+	textOffset.attr("x", (162 - textOffset.node().getComputedTextLength()) / 2);
+	textPathsAway.text(pathsAway)
+
+	direction2
+		.style("transform", "translate(" + centerX2 + "px," + centerY2 + "px)rotate(" + targetHeading + "deg)")
+
+}var socket = io();
+const containerJsonEditor = document.getElementById("jsoneditor")
+const options = {}
+//const editor = new JSONEditor(containerJsonEditor, options)
+var prevTarget = null
+// set json
+const initialJson = {
+    "Array": [1, 2, 3],
+    "Boolean": true,
+    "Null": null,
+    "Number": 123,
+    "Object": {"a": "b", "c": "d"},
+    "String": "Hello World"
+}
+////editor.set(initialJson)
+
+// get json
+////const updatedJson = editor.get()
+
+// koppel acties aan menu en hou toestand van s gelijk via socketApi.js
+
+//console.log('state.js geladen')
+//cc:AutoMow#1;onclick functie
+document.getElementById('reset').onclick = Reset
+document.getElementById('customSwitchDriveEnable').onclick = DriveEnable
+document.getElementById('customSwitchAutoMow').onclick = AutoMow
+document.getElementById('customSwitchMes').onclick = Mes
+document.getElementById('customSwitchTest').onclick = SlowTest
+document.getElementById('customSwitchNMEA').onclick = NMEA
+document.getElementById('customSwitchAutosteer').onclick = Autosteer
+document.getElementById('keuzeGPS').onclick = emitChoice
+document.getElementById('keuzeGPSudp').onclick = emitChoice
+document.getElementById('keuzeGPSSimulatie').onclick = emitChoice
+document.getElementById('keuzeGPSudpSimulatie').onclick = emitChoice
+document.getElementById('keuzeFile').onclick = emitChoice
+document.getElementById('contourOpnemen').onclick = emitChoiceContour
+document.getElementById('contourOpenen').onclick = emitChoiceContour
+document.getElementById('contourTonen').onclick = emitChoiceContour
+document.getElementById('contourOplaan').onclick = emitChoiceContour
+document.getElementById('contourWissen').onclick = emitChoiceContour
+document.getElementById('customSwitchMission').onclick = emitMission
+document.getElementById('customSwitchLog').onclick = emitKnop
+document.getElementById('pause').addEventListener('change', function() {
+	config.options.scales.xAxes[0].realtime.pause = this.checked;
+	//window.myChart.update({duration: 0});
+	document.getElementById('pauseValue').innerHTML = this.checked;
+})
+
+//menu instellen
+socket.on('state', function(GUI) {
+    console.log('GUI' + JSON.stringify(GUI, null, 4))
+    document.getElementById('customSwitchDriveEnable').checked = GUI.driveEnable
+    document.getElementById('customSwitchAutoMow').checked = GUI.autoMow2
+    //document.getElementById('AutoMow').innerHTML = 'Automatisch = ' + GUI.autoMow2
+    document.getElementById('customSwitchMes').checked = GUI.MaaiMES
+    document.getElementById('customSwitchTest').checked = GUI.SlowTest
+    document.getElementById('customSwitchNMEA').checked = GUI.NMEA.state
+    document.getElementById('customSwitchAutosteer').checked = GUI.Autosteer
+    document.getElementById('NMEAsource').innerHTML = GUI.NMEA.choice
+    document.getElementById('customSwitchMission').checked = GUI.mission.active
+    document.getElementById('contourDD').style.backgroundColor = GUI.contour.recordColor 
+    document.getElementById('contourOpnemen').style.backgroundColor = GUI.contour.recordColor
+    //popup files laten zien 
+    for (const item of GUI.contour.fileList) {       
+        let str = '<div class="form-check"><input class="form-check-input" type="radio" id="' + item + '" name="flexRadioDefault"><label class="form-check-label" for="' + item + '">' + item + '</label></div>'
+        GUI.contour.fileListStr += str
+    }
+    document.getElementById('fileList').innerHTML = GUI.contour.fileListStr
+})
+
+socket.on('s', function(GUI) {
+    console.log(GUI)
+    updateSpeed(parseInt(GUI.speedometer.avgSpeed * 10)/10, parseInt(GUI.speedometer.heading * 10)/10)
+   // updateSpeed(parseInt(GUI.mf.avgSpeed * 10)/10, parseInt(GUI.speedometer.heading * 10)/10)
+    //updateSpeed(GUI.gps.state.speed, GUI.gps.state.bearing)
+    //updateSpeed2(GUI.targetHeading);
+    updateSpeed2(parseInt(GUI.speedometer.localHeading*10)/10, GUI.mf.guidanceLineDistanceOff, GUI.speedometer.howManyPathsAway)
+        //te = t1 - Date.now();
+        //t1 = Date.now();
+
+    // append the new data to the existing chart data
+    chart.data.datasets[0].data.push({
+        x: Date.now(),
+        y: GUI.gps.state.speed * 10
+    });
+    chart.data.datasets[1].data.push({
+        x: Date.now(),
+        y: GUI.targetHeading
+    });
+    chart.data.datasets[2].data.push({
+        x: Date.now(),
+        y: GUI.gps.state.bearing
+    });
+    chart.data.datasets[3].data.push({
+        x: Date.now(),
+        y: GUI.angleError
+    });
+    updateAngleError(GUI.angleError);
+    chart.data.datasets[4].data.push({
+        x: Date.now(),
+        y: GUI.correction
+    });
+    chart.data.datasets[5].data.push({
+        x: Date.now(),
+        y: GUI.LM
+    });
+    chart.data.datasets[6].data.push({
+        x: Date.now(),
+        y: GUI.RM
+    })
+    chart.update({
+        preservation: true
+    })
+    updateAngleIMU(GUI.angleIMU)
+    //editor.set(GUI.contour.recList)
+    //var newwidth = $('.chartAreaWrapper2').width(); // te/100;// maak chart scrollable was 50 //http://jsfiddle.net/jmpxgufu/
+    //$('.chartAreaWrapper2').width(newwidth);
+    /*$('.chartAreaWrapper').animate({
+        scrollLeft: newwidth
+    });*/
+})
+socket.on('alert', function(text){
+    console.log('alert : ' + text )
+})
+// socket.on('jsonEditor', function(json) {
+//     editor.set(json)
+// })
+
+$('#LoadMission').click(function() {
+    var value = $("input:radio:checked").next().text();
+    $('#mission_input').val(value);
+    socket.emit('missionBestand', value)
+    $('#ContourOpenen').modal('hide');
+});
+function Reset() {
+    socket.emit('KnopReset')
+    console.log('KnopReset Emit')
+}
+function Mes(){
+    socket.emit('KnopMes')
+    console.log('KnopMes Emit')
+}
+function SlowTest() {
+    socket.emit('KnopTest')
+    console.log('KnopTest Emit')
+}
+function emitChoice(){
+    let choice = $(this).text() //this refereerd naar dropdown-item
+    socket.emit('NMEAsource', choice)
+};
+function emitChoiceContour(){
+    console.log(this)
+    let choice = $(this).text() //this refereerd naar dropdown-item
+    socket.emit('ContourChoice', choice)
+};
+function emitKnop() {
+    //console.log($(this).id())
+    //socket.emit('Knop', $(this).id())
+    console.log($(this.id))
+}
+function Log(){
+    socket.emit('KnopLog')
+    console.log('KnopLog Emit')
+};
+function NMEA(){
+    socket.emit('KnopNMEA')
+    console.log('KnopNMEA Emit')
+};
+function Autosteer(){
+    socket.emit('KnopAutosteer')
+    console.log('KnopAutosteer Emit')
+}
+function emitMission() {
+    socket.emit('KnopMission')
+    console.log('KnopMission Emit')
+}
+function DriveEnable() {
+    socket.emit('DriveEnable')
+    console.log('DriveEnable Emit')
+}
+function AutoMow() {
+    // socket.emit('AutoMow')
+    // console.log('AutoMow Emit')
+    socket.emit('AutoMow1')
+    console.log('AutoMow1 Emit')
+}
+function AutoMow2() {
+    socket.emit('AutoMow2')
+    console.log('AutoMow2 Emit')
+}
+function Cirkel1() {
+    socket.emit('Cirkel1')
+    console.log('Cirkel1 Emit')
+}
+function FixedRoute1() {
+    socket.emit('FixedRoute1')
+    console.log('FixedRoute1 Emit')
+}
+function FixedRoute2() {
+    socket.emit('FixedRoute2')
+    console.log('FixedRoute2 Emit')
+}
+function WisTraject() {
+    socket.emit('WisTraject')
+    console.log('WisTraject Emit')
+    trajectPath.splice(0,trajectPath.length)
+    console.log('in WisTraject'+ JSON.stringify(trajectPath, null, 4))
+}
+function AddPoint() {
+    socket.emit('AddPoint')
+    console.log('AddPoint Emit')
+}socket.on('nmea', function (data) { //laat de nmea zien in de browser
+    NMEA.gpsData = data;
+});
+
+NMEA = new Vue({
+    el: "#NMEA",
+    data: {
+        gpsData: "Hier komt de nmea-stream"
+    },
+    methods: {}
+});
+quality = new Vue({
+    el: "#quality",
+    data: {
+        qualitydata: "quality"
+    },
+    methods: {
+    }
+})
+waypoint = new Vue({
+    el: "#waypoint",
+    data: {
+        waypointdata: "waypointClick"
+    },
+    methods: {}
+})
+targetDist = new Vue({
+    el: "#targetDist",
+    data: {
+        targetDist: "Hier komt de targetDistance"
+    },
+})
+goalPointDistance = new Vue({
+    el: "#goalPointDistance",
+    data: {
+        goalPointDistancedata: "goalPointDistance"
+    },
+    methods: {}
+})
+socket.on('goalPointDistance', function (data) { 
+    console.log("socket=>goalPointDistance ontvangen" + data)
+    goalPointDistance.goalPointDistancedata = data
+})
+
+socket.on('quality', function (data) { 
+    console.log("socket=>quality ontvangen " + data)
+    quality.qualitydata = data
+})
+socket.on('s', function(data) {
+    console.log("socket=>s ontvangen")
+    settings.settingsdata = data //verwijst naar de Vue-component setting onderaan
+    NMEA.gpsData = data.gps;
+})
+settings = new Vue({
+    el:"#settings",
+    data: {
+        settingsdata: "Hier komen settings.json of s"
+    }
+})
+    var p = 0;
+var t1, te;
+var socket = io();
+var startTime;
+var markers = [0,0];
+var down = 0;
+var joystick	= new VirtualJoystick({
+    container	: document.getElementById('containerMain'),
+    strokeStyle : 'green',
+    mouseSupport	: true,
+    limitStickTravel: true,
+    stickRadius		: 125,
+    stationaryBase : true,
+    //useCssTransform : true,
+    baseX: document.getElementById('containerMain').clientWidth/2,
+    baseY: document.getElementById('containerMain').clientHeight/2
+});
+
+joystick.addEventListener('touchStart', function(){
+    //console.log('down')
+    down = 1;
+})
+joystick._container.addEventListener("mousedown", function(){
+    //console.log('down')
+    down = 1;
+})
+joystick.addEventListener('touchEnd', function(){
+    //console.log('up')
+    down = 0;
+})
+joystick._container.addEventListener('mouseup', function(){
+    //console.log('up')
+    down = 0;
+})
+var speedSlider = document.getElementById("SpeedSlider")
+var speedOutput = document.getElementById("SpeedSliderValue")
+
+speedOutput.innerHTML = speedSlider.value
+speedSlider.oninput = function () {
+    speedOutput.innerHTML = this.value
+    socket.emit("key", {
+        Key: "SpeedSliderValue",
+        value: this.value
+    })
+}
+var pslider = document.getElementById("Pslider");
+var poutput = document.getElementById("Pvalue");
+poutput.innerHTML = pslider.value / 1000;
+pslider.oninput = function () {
+    poutput.innerHTML = this.value / 1000;
+    socket.emit('key', {
+        Key: 'Pvalue',
+        value: this.value / 1000
+    });
+}
+var islider = document.getElementById("Islider");
+var ioutput = document.getElementById("Ivalue");
+ioutput.innerHTML = islider.value / 1000;
+islider.oninput = function () {
+    ioutput.innerHTML = this.value / 1000;
+    socket.emit('key', {
+        Key: 'Ivalue',
+        value: this.value / 1000
+    });
+}
+var dslider = document.getElementById("Dslider");
+var doutput = document.getElementById("Dvalue");
+doutput.innerHTML = dslider.value / 1000;
+dslider.oninput = function () {
+    doutput.innerHTML = this.value / 1000;
+    socket.emit('key', {
+        Key: 'Dvalue',
+        value: this.value / 1000
+    });
+}
+
+var pureSlider = document.getElementById("pureSlider");
+var pureOutput = document.getElementById("pureValue");
+pureOutput.innerHTML = pureSlider.value / 1000;
+pureSlider.oninput = function () {
+    pureOutput.innerHTML = this.value / 1000;
+    socket.emit('key', {
+        Key: 'pureValue',
+        value: this.value / 1000
+    });
+}
+
+var trackPath,
+    trajectPath = [];
+
+let prevFutureMarker = null
+let prevTargetpointMarker = null
+let prevPpCircle = null
+let ppCircles = null
+let prevGpCircle = null
+
+function initMap() { //wordt gestart vanuit maplayout.pug (callback=initMap)
+    console.log('in initMap ' + markers)
+    var alpha = 0.4; // smoothing factor
+
+    /*var state = {
+        // thuis        
+        lat: 50.996328561666665,
+        lng: 5.388168066666666
+        //Pa
+        //lat: 51.05034169,               lng: 5.30504305
+    };*/
+    let mapLocation = [50.996328561666665, 5.388168066666666]
+
+    //console.log(s)
+    console.log(mapLocation)
+    //var state = {lat: 51.05033956456792, lng: 5.304905256533743}; //PA
+    var b = 0;
+
+    map = L.map('map', {center: mapLocation, zoom: 20, minZoom: 4, maxZoom: 25})
+
+    const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+		maxZoom: 19,
+		maxNativeZoom: 19,
+		attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+	}).addTo(map);
+
+    var prevQuality = '';
+
+    /*map.addListener('click', function (e) {
+        console.log('        clickTarget value e')
+        console.log(JSON.stringify(e, null, 4)); // (Optional) beautiful indented output.
+        placeMarker(e.latLng, map, '');
+        socket.emit('key', {
+            Key: 'clickTarget',
+            value: e
+        });
+        waypoint.waypointdata = e.latLng
+        console.log('LatLng emit to server');
+    });*/
+    map.on('click', function(e) {   //2024 OK
+        waypoint.waypointdata = e.latlng
+        console.log('click'+ e.latlng)   
+        placeMarker(e.latlng, map, '')
+        socket.emit('key', {
+            Key: 'clickTarget',
+            value: e.latlng
+        });
+        console.log('LatLng emit to server');
+    })
+
+    //let latlng = L.latLng(50.5, 30.5); // leaflet
+
+////let lineAB = L.polyline([], {color: 'blue', weight: 3})2014
+    /*var line = new google.maps.Polyline({
+        map: map,
+        icons: [{
+            icon: {
+                path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+                strokeColor: '#ff0000',
+                fillColor: '#ff0000',
+                fillOpacy: 0.5,
+                //scale: 5
+            },
+
+            repeat: '100px',
+            path: []
+        }],
+        strokeWeight: 1,
+        strokeColor: '#ff0000',
+    });*/
+    let line = L.polyline([], {color: 'red', weight: 3});
+    /**var line1 = new google.maps.Polyline({
+        map: map,
+        icons: [{
+            icon: {
+                path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+                strokeColor: '#00ff00',
+                fillColor: '#00ff00',
+                fillOpacy: 0.5,
+                //scale: 5
+            },
+            repeat: '100px',
+            path: []
+        }],
+        strokeWeight: 1,
+        strokeColor: '#00ff00',
+    });**/
+    let line1 = L.polyline([], {color: 'green'})
+
+    var missionLine = L.polyline([], {color: '#FFFF00'})
+
+    $("#draw a").click(function (e) {
+        //	 e.preventDefault();
+        console.log("draws");
+
+        disable()
+
+        // google.maps.event.addDomListener(map.getDiv(), 'mousedown', function (e) {
+        //     console.log('in mousedown');
+        //     drawFreeHand()
+        //});
+
+    });
+    socket.on('zetBeginpunt'), function(pos) {
+        zetBeginpunt(pos)
+    }
+    //io.sockets.on('position', function (pos) {
+    
+    /*socket.on('position', function (pos) {
+        //20201019
+        //****rode pijl 
+        //console.log(pos)
+        state.lat = pos.lat; //Echte waardes
+        state.lng = pos.lon;
+        if (pos.quality != prevQuality) {
+            console.log('quality = ' + pos.quality);
+            prevQuality = pos.quality
+        }
+        var path = line.getPath().getArray(),
+            latLng = new google.maps.LatLng(state.lat, state.lng);
+        path.push(latLng);
+        // path beperken
+        if (path.length > 400) {
+            path.shift();
+        };
+        line.setPath(path);
+        //map.setCenter(latLng);
+        //new google.maps.Marker({map:map,position:latLng});
+
+        //waardes kalman //**** groene pijl 
+        state.lat = pos.position.pos[0]; //geschatte waardes kalman
+        state.lng = pos.position.pos[1];
+        var path1 = line1.getPath().getArray(),
+            latLng = new google.maps.LatLng(state.lat, state.lng);
+        path1.push(latLng);
+        if (path1.length > 40) {
+            path1.shift();
+        };
+        line1.setPath(path1);
+    });*/
+    socket.on('position', function (pos) {
+        //ROOD
+        //console.log('position', pos)
+        if (pos.quality != prevQuality) {
+            console.log('quality = ' + pos.quality);
+            prevQuality = pos.quality
+        }
+        let point = [pos.lat,pos.lon]
+        //console.log('point', point)
+        line.addLatLng(point)
+        line.addTo(map) 
+        //GROEN waardes kalman //
+
+    })
+    socket.on('log', function (log) {
+        console.log('serverLog: ' + JSON.stringify(log, null, 4));
+    })
+    socket.on('target', function (target) { //rood cirkeltje
+        console.log('clientLog: target van server ontvangen= ' + JSON.stringify(target, null, 4));
+        target.lng = target.lon;
+        placeTargetpoint(target, map, target.n.toString());
+    });
+    socket.on('targetA', function (target) { //rood cirkeltje Array
+        console.log('clientLog: targetA van server ontvangen= ' + JSON.stringify(target, null, 4));
+        target.lat = target[0]
+        target.lng = target[1]
+        //target.lng = target.lon;
+        //placeTargetpoint(target, map, target.n.toString());
+        placeTargetpoint(target, map, target[2]);
+    });
+    socket.on('futurePoint', function (target) { //blauw kruisje Array
+        console.log('clientLog: futurePoint van server ontvangen= ' + JSON.stringify(target, null, 4));
+        target.lat = target[0]
+        target.lng = target[1]
+        placeFuturePoint(target, map, target[2]);
+    });
+    socket.on('traject', function (traject) {
+        //console.log('traject van server ontvangen= ' + JSON.stringify(traject, null, 4));
+        trajectPath = traject; //traject[0].lat
+        ToonTraject()
+    });
+    socket.on('ABLijn', function (puntA, puntB) {
+        console.log('ABLijn punt A : %s; punt B : %s',puntA, puntB)
+        ////let path = lineAB.getPath().getArray()
+        ////path.push(new google.maps.LatLng(puntA[0],puntA[1]))
+        ////path.push(new google.maps.LatLng(puntB[0],puntB[1]))
+        ////lineAB.setPath(path)
+        let latlngs = [
+            [puntA[0],puntA[1]],
+            [puntB[0],puntB[1]]
+        ]
+        //let lineAB = 
+        L.polyline(latlngs, {color: 'blue', weight: 3}).addTo(map)
+        //lineAB.addLatLng([puntA[0],puntA[1]])
+        //lineAB.addLatLng([puntB[0],puntB[1]])
+        //lineAB.addTo(map)
+
+    })
+    socket.on('missionPath', function (input) { //20240114 OK
+        console.log('missionPath van server ontvangen = ' + JSON.stringify(input, null, 4))
+
+        for (var i = 0; i < input.length; i++) {
+            //console.log('%s ; %s', input[i][0], input[i][1])
+            missionLine.addLatLng([input[i][0], input[i][1]])
+        }
+
+        //console.log(JSON.stringify(path, null, 4))
+        console.log(JSON.stringify(missionLine, null, 4))
+        missionLine.addTo(map)
+    })
+    socket.on('contourPath', function (contourPath) {
+        console.log('contourPath' + JSON.stringify(contourPath, null, 4))
+    })
+    socket.on('placeCircle', function(target, color) {
+        if (color === "#FF0000") { 
+            console.log('clientLog: rode PurePursuitCircle van server ontvangen= ' + JSON.stringify(target, null, 4));
+        } else console.log('clientLog: groene gpCircle van server ontvangen= ' + JSON.stringify(target, null, 4));
+        target.lat = target[0]
+        target.lng = target[1]
+        placeCircle(target, target[2],map, color)
+    })    
+    socket.on('RemoveMarkers', function() {
+        hideMarkers();
+        //markers = [];
+    })
+
+}
+
+function placeTargetpoint(position, map, title) {
+    //if(title == undefined)
+
+    // var image = {
+    //     url: 'trajectPoint.png', //rood cirkeltje
+    //     // This marker is 7 pixels wide by 7 pixels high.
+    //     size: new google.maps.Size(7, 7),
+    //     origin: new google.maps.Point(0, 0),
+    //     anchor: new google.maps.Point(5, 5)
+    // };
+    // var marker = new google.maps.Marker({
+    //     position: position,
+    //     map: map,
+    //     icon: image,
+    //     title: title
+    // });
+    // markers.push(marker);
+    //setTimeout(removeMarker, 200, marker)
+    //map.panTo(position);
+    if (prevTargetpointMarker) {
+        removeMarker(prevTargetpointMarker)
+    }
+    var image = L.icon({
+        iconUrl: 'trajectPoint.png', // rood cirkeltje 7px * 7px
+        className: "targetPoint",
+        //shadowUrl: 'leaf-shadow.png',
+        iconSize:     [5, 5], // size of the icon
+        //shadowSize:   [50, 64], // size of the shadow
+        iconAnchor:   [3, 3], // point of the icon which will correspond to marker's location
+        //shadowAnchor: [4, 62],  // the same for the shadow
+        //popupAnchor:  [-3, -76] // point from which the popup should open relative to the iconAnchor
+    });
+    let marker = L.marker(position, {icon: image})
+    marker.addTo(map);
+    //console.log(markers)
+    markers.push(marker)
+    //console.log(markers)
+    //setTimeout(removeMarker, 500, marker)
+    prevTargetpointMarker = marker
+}
+function placeFuturePoint(position, map, title) {
+    // var image = {
+    //     url: 'futurePoint.png', //blauw kruisje
+    //     // This marker is 7 pixels wide by 7 pixels high.
+    //     size: new google.maps.Size(7, 7),
+    //     origin: new google.maps.Point(0, 0),
+    //     anchor: new google.maps.Point(5, 5)
+    // };
+    // var marker = new google.maps.Marker({
+    //     position: position,
+    //     map: map,
+    //     icon: image,
+    //     title: title
+    // });
+    // markers.push(marker);
+    // //map.panTo(position);
+    // setTimeout(removeMarker, 200, marker)
+    if (prevFutureMarker) {
+        removeMarker(prevFutureMarker)
+    }
+    //setMapOnAll(null); //20240121 laatste markers zichtbaar houden 
+    var image = L.icon({
+        iconUrl: 'futurePoint.png', //blauw kruisje
+        // This marker is 7 pixels wide by 7 pixels high.
+        className: "futurePoint",
+        //shadowUrl: 'leaf-shadow.png',
+        iconSize:     [5, 5], // size of the icon
+        //shadowSize:   [50, 64], // size of the shadow
+        iconAnchor:   [3, 3], // point of the icon which will correspond to marker's location
+        //shadowAnchor: [4, 62],  // the same for the shadow
+        //popupAnchor:  [-3, -76] // point from which the popup should open relative to the iconAnchor
+    });
+    let marker = L.marker(position, {icon: image})
+    marker.addTo(map);
+    //console.log(markers)
+    markers.push(marker)
+    //console.log(markers)
+    //setTimeout(removeMarker, 500, marker)
+    prevFutureMarker = marker
+}
+function placeCircle(center, radius, map, color) {
+    // const turningCircle = new google.maps.Circle({
+    //     strokeColor: color,
+    //     strokeOpacity: 0.8,
+    //     strokeWeight: 1,
+    //     //fillColor: "#FF0000",
+    //     fillOpacity: 0,
+    //     map: map,
+    //     center: center,
+    //     radius: radius
+    //   });
+    //   markers.push(turningCircle);
+    //   setTimeout(removeMarker, 200, turningCircle)
+    //console.log(`Center ${center}| Radius ${radius} | Color ${color}`)
+   
+    let circle = L.circle(center, {radius: Math.abs(radius), color:color, weight : 0.5, fill: false})
+    circle.addTo(map) //, fill: false
+    if (color === "#FF0000") {
+        if (prevPpCircle) {
+            removeMarker(prevPpCircle)
+        }
+        prevPpCircle = circle
+        console.log('rood %s %O',radius, prevPpCircle)
+    }
+    if (color === "#00FF00") {
+        if (prevGpCircle) {
+            removeMarker(prevGpCircle)
+        }
+        prevGpCircle = circle
+        console.log('groen %s %O',radius, prevGpCircle)
+     }
+
+}
+// Sets the map on all markers in the array.
+function setMapOnAll(map) {
+    for (let i = 0; i < markers.length; i++) {
+        markers[i].setMap(map);
+    }
+}
+function placeMarker(position, map, title) {
+    let marker = L.icon({
+        iconUrl: 'images/symbol_fore_close.png',
+        iconSize: [38, 95],
+        iconAnchor: [22, 94]
+    })
+    //L.marker(position, { icon: marker }).addTo(map);
+    L.marker(position).addTo(map);
+}
+// Removes the markers from the map, but keeps them in the array.
+function hideMarkers() {
+    setMapOnAll(null);
+}
+function removeMarker(marker) {
+    //console.log(marker)//marker.setMap(null)
+    map.removeLayer(marker); // remove
+}
+function placeHeading(position, map, title, angle) {
+    // var marker = new google.maps.Marker({
+    //     position: position,
+    //     map: map,
+    //     title: title,
+    //     icon: icon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_arrow_up)),
+    //     rotation: angle
+    // });
+    //map.panTo(position);
+
+}
+function drawFreeHand() {
+    //the polygon
+    var poly = new google.maps.Polyline({
+        map: map,
+        clickable: false
+    });
+    //move-listener
+    var move = google.maps.event.addListener(map, 'mousemove', function (e) {
+        poly.getPath().push(e.latlng);
+    });
+    //mouseup-listener
+    /**google.maps.event.addListenerOnce(map, 'mouseup', function (e) {
+        google.maps.event.removeListener(move);
+        var path = poly.getPath();
+        console.log('path = ' + JSON.stringify(path, null, 4));
+        poly.setMap(null);
+        poly = new google.maps.Polygon({
+            map: map,
+            path: path
+        });
+        google.maps.event.clearListeners(map.getDiv(), 'mousedown');
+        enable()
+        trackpath = path;
+    });**/
+    var newzoom = '' + (2*(mymap.getZoom())) +'px';
+    $('#mapid .targetPoint').css({'width':newzoom,'height':newzoom});
+}
+function ToonTraject() {
+    //socket.emit('ToonTraject');
+    //console.log('ToonTraject Emit');
+    console.log('in ToonTraject' + JSON.stringify(trajectPath, null, 4)); //traject[0].lat
+    for (i = 0; i < trajectPath.length; i++) {
+        console.log('ToonTraject ' + trajectPath[i])
+        placeMarker(trajectPath[i], map, '[' + i.toString() + ']');
+    }
+}
+function zetBeginpunt(position) {
+    map.panTo(position);
+}
+function disable() {
+    map.setOptions({
+        draggable: false,
+        zoomControl: false,
+        scrollwheel: false,
+        disableDoubleClickZoom: false
+    });
+}
+function enable() {
+    map.setOptions({
+        draggable: true,
+        zoomControl: true,
+        scrollwheel: true,
+        disableDoubleClickZoom: true
+    });
+}
+
+
+var width = 500;
+var barHeight = 100;
+var padding = 1;
+var ctx = document.getElementById('myChart').getContext('2d');
+var config = {
+    type: 'line',
+    data: {
+        datasets: [{
+            label: 'Snelheid',
+            borderColor: 'rgb(54, 162, 235)',
+            backgroundColor: 'rgba(54, 162, 235, 0.5)',
+            data: []
+        }, {
+            label: 'Targetheading',
+            borderColor: 'rgb(0, 255, 0)',
+            backgroundColor: 'rgba(255, 255, 255, 0)',
+            data: []
+        }, {
+            label: 'Heading',
+            borderColor: 'rgb(0 ,125, 0)',
+            backgroundColor: 'rgba(255, 255, 255, 0)',
+            data: []
+        }, {
+            label: 'AngleError',
+            borderColor: 'rgb(33, 0, 0)',
+            backgroundColor: 'rgba(255, 255, 255, 0)',
+            data: []
+        }, {
+            label: 'PIDout',
+            borderColor: 'rgb(170,0,255)',
+            backgroundColor: 'rgba(255, 255, 255, 0)',
+            data: []
+        }, {
+            label: 'LM',
+            borderColor: 'rgb(255, 0, 0)',
+            backgroundColor: 'rgba(255, 255, 255, 0)',
+            data: []
+        }, {
+            label: 'RM',
+            borderColor: 'rgb(0, 0, 255)',
+            backgroundColor: 'rgba(255, 255, 255, 0)',
+            data: []
+        }, {
+            label: 'timer',
+            borderColor: 'rgb(0, 255, 255)',
+            backgroundColor: 'rgba(255, 255, 255, 0)',
+            data: []
+        }]
+    },
+    options: {
+        scales: {
+            xAxes: [{
+                type: 'realtime',
+                realtime: {
+                    pause: false
+                }
+            }]
+        },
+        animation: {
+            duration: 0 // general animation time//disable animations = tijdwinst 20201024
+        },
+        hover: {
+            animationDuration: 0 // duration of animations when hovering an item//disable animations = tijdwinst
+        },
+        responsiveAnimationDuration: 0 // animation duration after a resize//disable animations = tijdwinst
+    }
+}
+var chart = new Chart(ctx, config)
+setInterval(function(){
+    if (down) {
+        var outputEl	= document.getElementById('joystickResult');
+        outputEl.innerHTML	= '<b>Result:</b> '
+            + ' dx:'+  joystick.deltaX().toFixed(1)
+            + ' dy:'+ -joystick.deltaY().toFixed(1)
+            + (joystick.right()	? ' right'	: '')
+            + (joystick.up()	? ' up'		: '')
+            + (joystick.left()	? ' left'	: '')
+            + (joystick.down()	? ' down' 	: '')	
+        socket.emit('key', { Key: 'Steering', speed: -joystick.deltaY().toFixed(1)*2, steer: joystick.deltaX().toFixed(1)*2});
+        //socket.emit('key', { Key: 'Steering', value: joystick.deltaX().toFixed(1)});
+  //console.log('result ' + JSON.stringify(outputEl, null, 4));
+    }
+  }, 1/8 * 1000);
+    var svgAngleError = d3.select("body")//angleError arrow
+	.append("svg")
+	.attr("id", "svg3")
+	.style("position", "fixed")
+	.style("left", "250px")
+	.style("bottom", "10px")
+	.attr("width", 160)
+	.attr("height", 160)
+	.append("g");
+var centerX3 = 80;
+var centerY3 = 80;
+var path1 = [];
+var path2 = [];
+var start = 270; // °
+var end = -10; // °
+var startH = 0;
+var endH = 9; //45
+var stepH = 1; //5
+var n = (endH - startH);
+/*
+function speedAngle(i) {
+	return end + (Math.min(i, endH) - endH) / (startH - endH) * (start - end)
+}
+*/
+//var speed3 = 0;
+var angle = svgAngleError.append("path")
+	.attr("d", [
+		"M", Math.cos(Math.PI / 2 + Math.PI) * 5, -Math.sin(Math.PI / 2 + Math.PI) * 5,
+		"L", Math.cos(Math.PI / 4 + Math.PI) * 10, -Math.sin(Math.PI / 4 + Math.PI) * 10,//was 15
+		"L", Math.cos(Math.PI / 2) * 10, -Math.sin(Math.PI / 2) * 10,
+		"L", Math.cos(-Math.PI / 4) * 10, -Math.sin(-Math.PI / 4) * 10,
+		"Z"
+	].join(" "))
+	.style("transform", "translate(" + centerX3 + "px," + centerY3 + "px)")
+	.attr("fill", "#000")
+	.attr("stroke", "none");
+function updateAngleError(angleError) { //targetHeading ontvangen 
+	//console.log ('in UpdateAngleError'+ angleError);
+	angle
+		.style("transform", "translate(" + centerX3 + "px," + centerY3 + "px)rotate(" + angleError + "deg)")
+}var svgAngleIMU = d3.select("body") //angleIMU arrow
+	.append("svg")
+	.attr("id", "svg4")
+	.style("position", "fixed")
+	.style("left", "280px")
+	.style("bottom", "10px")
+	.attr("width", 160)
+	.attr("height", 160)
+	.append("g");
+var centerX4 = 80;
+var centerY4 = 80;
+var path1 = [];
+var path2 = [];
+var start = 270; // °
+var end = -10; // °
+var startH = 0;
+var endH = 9; //45
+var stepH = 1; //5
+var n = (endH - startH);
+var angleIMU = 0
+
+/*
+function speedAngle(i) {
+	return end + (Math.min(i, endH) - endH) / (startH - endH) * (start - end)
+}
+*/
+//var speed3 = 0;
+var textValue = svgAngleIMU.append("text")
+	.attr("x", 80)
+	.attr("y", 50)
+	.attr("font-size", "10px")
+	.attr("fill", "black")
+	.text(angleIMU)
+
+var angleI = svgAngleIMU.append("path")
+	.attr("d", [
+		"M", Math.cos(Math.PI / 2 + Math.PI) * 5, -Math.sin(Math.PI / 2 + Math.PI) * 5,
+		"L", Math.cos(Math.PI / 4 + Math.PI) * 10, -Math.sin(Math.PI / 4 + Math.PI) * 10, //was 15
+		"L", Math.cos(Math.PI / 2) * 10, -Math.sin(Math.PI / 2) * 10,
+		"L", Math.cos(-Math.PI / 4) * 10, -Math.sin(-Math.PI / 4) * 10,
+		"Z"
+	].join(" "))
+	.style("transform", "translate(" + centerX4 + "px," + centerY4 + "px)")
+	.attr("fill", "#00f")
+	.attr("stroke", "none");
+
+function updateAngleIMU(angleIMU) { //	angleIMU ontvangen 
+	//console.log ('in UpdateAngleIMU'+ angleIMU);
+	angleI
+		.style("transform", "translate(" + centerX4 + "px," + centerY4 + "px)rotate(" + angleIMU + "deg)")
+	textValue.text(angleIMU.toFixed(2))
+}
+  </script>
+  <!--script(src='https://maps.googleapis.com/maps/api/js?key=AIzaSyADf2Ss5DEZdZMFEJ0f8fmi1KcYRZMYLZI&callback=initMap'async defer)
+  -->
+  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+  <script src="/stylesheets/bootstrap.bundle.min.js"></script>
+</body>

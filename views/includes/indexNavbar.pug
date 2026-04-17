@@ -1,0 +1,16 @@
+nav.navbar.navbar-expand-sm.navbar-dark.bg-dark.mb-4
+  a.navbar-brand(href='/') MowPi #{version}
+    button.navbar-toggler(type='button', data-toggle='collapse', data-target='#navbarsExample01', aria-controls='navbarsExample01', aria-expanded='false', aria-label='Toggle navigation')
+      span.navbar-toggler-icon
+  .form-check.form-switch.col-sm-2
+    input(type='checkbox' class='form-check-input' id='customSwitchDriveEnable')
+    label(class='form-check-label text-white' for='customSwitchDriveEnable') Drive Enable
+  a.nav-link(id='AutoMow') Automatisch
+  a.nav-link(id='Turn') Omkeren
+  a.nav-link(href='map') Map
+  .form-check.form-switch.col-sm-1
+    input(type='checkbox' class='form-check-input' id='customSwitchMes')
+    label(class='form-check-label text-white' for='customSwitchMes') MES
+  .form-check.form-switch.col-sm-1
+    input(type='checkbox' class='form-check-input' id='customSwitchNMEA')
+    label(class='form-check-label text-white' for='customSwitchNMEA') NMEA

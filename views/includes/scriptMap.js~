@@ -1,0 +1,422 @@
+var p = 0;
+var t1, te;
+var socket = io();
+var startTime;
+
+/*setInterval(function() {
+    startTime = Date.now();
+    console.log(startTime);
+    socket.emit('ping1');
+}, 2000);
+
+socket.on('pong1', function() {
+    latency = Date.now() - startTime;
+    console.log('latency = '+latency);
+});
+*/
+var pslider = document.getElementById("Pslider");
+var poutput = document.getElementById("Pvalue");
+poutput.innerHTML = pslider.value / 1000;
+pslider.oninput = function () {
+    poutput.innerHTML = this.value / 1000;
+    socket.emit('key', {
+        Key: 'Pvalue',
+        value: this.value / 1000
+    });
+}
+var islider = document.getElementById("Islider");
+var ioutput = document.getElementById("Ivalue");
+ioutput.innerHTML = islider.value / 1000;
+islider.oninput = function () {
+    ioutput.innerHTML = this.value / 1000;
+    socket.emit('key', {
+        Key: 'Ivalue',
+        value: this.value / 1000
+    });
+}
+var dslider = document.getElementById("Dslider");
+var doutput = document.getElementById("Dvalue");
+doutput.innerHTML = dslider.value / 1000;
+dslider.oninput = function () {
+    doutput.innerHTML = this.value / 1000;
+    socket.emit('key', {
+        Key: 'Dvalue',
+        value: this.value / 1000
+    });
+}
+
+//document.getElementById('AutoMow').onclick = AutoMow;
+//document.getElementById('AutoMow1').onclick = AutoMow1;
+//ocument.getElementById('AutoMow2').onclick = AutoMow2;
+//document.getElementById('Cirkel1').onclick = Cirkel1;
+//document.getElementById('Mes').onclick = Mes;
+/*document.getElementById('DriveEnable').onclick = DriveEnable;
+document.getElementById('FixedRoute1').onclick = FixedRoute1;
+document.getElementById('FixedRoute2').onclick = FixedRoute2;
+document.getElementById('WisTraject').onclick = WisTraject;
+document.getElementById('AddPoint').onclick = AddPoint;
+document.getElementById('RecordContour').onclick = RecordContour;
+*/
+var trackPath,
+    trajectPath = [];
+
+function initMap() {
+    console.log('in initMap')
+    //document.getElementById('ToonTraject').onclick = ToonTraject;
+    var alpha = 0.4; // smoothing factor
+    
+    var state = {   // thuis        lat: 50.996328561666665,        lng: 5.388168066666666
+    	//Pa
+    	lat: 51.05034169,
+    	lng: 5.30504305
+    }; 
+    //var state = {lat: 51.05033956456792, lng: 5.304905256533743}; //PA
+    var b = 0;
+    var map = new google.maps.Map(document.getElementById('map'), {
+        center: state,
+        zoom: 22
+    });
+
+    /*var marker = new google.maps.Marker({
+        position: state,
+        map: map,
+        title: 'Your Position'
+    });*/
+    var prevQuality = '';
+
+    map.addListener('click', function (e) {
+        console.log('        clickTarget value e')
+        console.log(JSON.stringify(e, null, 4)); // (Optional) beautiful indented output.
+        placeMarker(e.latLng, map, '');
+        socket.emit('key', {
+            Key: 'clickTarget',
+            value: e
+        });
+        console.log('LatLng emit to server');
+    });
+
+    function placeMarker(position, map, title) {
+        var marker = new google.maps.Marker({
+            position: position,
+            map: map,
+            title: title
+        });
+        //map.panTo(position);
+    }
+
+    function placeTargetpoint(position, map, title) {
+        var image = {
+            url: 'trajectPoint.png', //rood cirkeltje
+            // This marker is 7 pixels wide by 7 pixels high.
+            size: new google.maps.Size(7, 7),
+            origin: new google.maps.Point(0, 0),
+            anchor: new google.maps.Point(5, 5)
+        };
+        var marker = new google.maps.Marker({
+            position: position,
+            map: map,
+            icon: image,
+            title: title
+        });
+        //map.panTo(position);
+    }
+
+    function placeTargetpointOUD(position, map, title) {
+        var Circle = new google.maps.Circle({
+            strokeColor: '#FF0000',
+            strokeOpacity: 0.5,
+            strokeWeight: 2,
+            fillColor: '#FF0000',
+            fillOpacity: 0.15,
+            map: map,
+            center: position,
+            radius: 0.1
+        });
+    }
+
+    var line = new google.maps.Polyline({
+        map: map,
+        icons: [{
+            icon: {
+                path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+                strokeColor: '#ff0000',
+                fillColor: '#ff0000',
+                fillOpacy: 1,
+                //scale: 5
+            },
+            repeat: '100px',
+            path: []
+        }]
+    });
+    var line1 = new google.maps.Polyline({
+        map: map,
+        icons: [{
+            icon: {
+                path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+                strokeColor: '#00ff00',
+                fillColor: '#00ff00',
+                fillOpacy: 1,
+                //scale: 5
+            },
+            repeat: '100px',
+            path: []
+        }]
+    });
+
+    function placeHeading(position, map, title, angle) {
+        var marker = new google.maps.Marker({
+            position: position,
+            map: map,
+            title: title,
+            icon: icon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_arrow_up)),
+            rotation: angle
+        });
+        //map.panTo(position);
+    }
+
+    function drawFreeHand() {
+        //the polygon
+        var poly = new google.maps.Polyline({
+            map: map,
+            clickable: false
+        });
+        //move-listener
+        var move = google.maps.event.addListener(map, 'mousemove', function (e) {
+            poly.getPath().push(e.latLng);
+        });
+        //mouseup-listener
+        google.maps.event.addListenerOnce(map, 'mouseup', function (e) {
+            google.maps.event.removeListener(move);
+            var path = poly.getPath();
+            console.log('path = ' + JSON.stringify(path, null, 4));
+            poly.setMap(null);
+            poly = new google.maps.Polygon({
+                map: map,
+                path: path
+            });
+            google.maps.event.clearListeners(map.getDiv(), 'mousedown');
+            enable()
+            trackpath = path;
+        });
+    }
+
+    function ToonTraject() {
+        //socket.emit('ToonTraject');
+        //console.log('ToonTraject Emit');
+        console.log('in ToonTraject' + JSON.stringify(trajectPath, null, 4)); //traject[0].lat
+        for (i = 0; i < trajectPath.length; i++) {
+            placeMarker(trajectPath[i], map, '[' + i.toString() + ']');
+        }
+    }
+    
+    function disable() {
+        map.setOptions({
+            draggable: false,
+            zoomControl: false,
+            scrollwheel: false,
+            disableDoubleClickZoom: false
+        });
+    }
+
+    function enable() {
+        map.setOptions({
+            draggable: true,
+            zoomControl: true,
+            scrollwheel: true,
+            disableDoubleClickZoom: true
+        });
+    }
+
+    $("#draw a").click(function (e) {
+        //	 e.preventDefault();
+        console.log("draws");
+
+        disable()
+
+        google.maps.event.addDomListener(map.getDiv(), 'mousedown', function (e) {
+            console.log('in mousedown');
+            drawFreeHand()
+        });
+
+    });
+
+    socket.on('position', function (pos) {
+        //console.log(pos)
+        state.lat = pos.lat; //Echte waardes
+        state.lng = pos.lon;
+        if (pos.quality == prevQuality) {
+
+        } else {
+            console.log('quality = ' + pos.quality);
+            prevQuality = pos.quality
+        }
+        var path = line.getPath().getArray(),
+            latLng = new google.maps.LatLng(state.lat, state.lng);
+        path.push(latLng);
+        // path beperken
+         if (path.length > 400) {
+             path.shift();
+         };
+        line.setPath(path);
+        //map.setCenter(latLng);
+        //new google.maps.Marker({map:map,position:latLng});
+
+        //waardes kalman
+        state.lat = pos.position.pos[0]; //geschatte waardes kalman
+        state.lng = pos.position.pos[1];
+        var path1 = line1.getPath().getArray(),
+            latLng = new google.maps.LatLng(state.lat, state.lng);
+        path1.push(latLng);
+        if (path1.length > 40) {
+            path1.shift();
+        };
+        line1.setPath(path1);
+
+
+    });
+    socket.on('log', function (log) {
+        console.log('serverLog: ' + log);
+    });
+    /*socket.on('gpsState', function (gpsState) { //wijzerplaat
+        //console.log('gpsState = ' + JSON.stringify(gpsState, null, 4));
+        updateSpeed(gpsState);
+        updateSpeed1(gpsState);
+        //updateSpeed2(gpsState);
+    });*/
+    socket.on('target', function (target) { //rood cirkeltje
+        console.log('clientLog: target van server ontvangen= ' + JSON.stringify(target, null, 4));
+        target.lng = target.lon;
+        placeTargetpoint(target, map, target.n.toString());
+    });
+    socket.on('traject', function (traject) {
+        console.log('traject van server ontvangen= ' + JSON.stringify(traject, null, 4));
+        trajectPath = traject; //traject[0].lat
+        ToonTraject()
+    });
+    socket.on('contourPath', function(contourPath){
+        console.log('contourPath'+ JSON.stringify(contourPath, null, 4))
+
+    })
+    /*socket.on('targetHeading', function (targetHeading) {
+        updateSpeed2(targetHeading);
+        chart.data.datasets[1].data.push({
+            x: Date.now(),
+            y: targetHeading
+        });
+        latLng = new google.maps.LatLng(state.lat, state.lng);
+        //placeHeading(position, map, title)
+    });
+    socket.on('angleError', function (angleError) {
+        chart.data.datasets[3].data.push({
+            x: Date.now(),
+            y: angleError
+        });
+        updateAngleError(angleError);
+    });
+    socket.on('Mot', function (Mot) {
+        chart.data.datasets[4].data.push({
+            x: Date.now(),
+            y: Mot.PIDout
+        });
+        chart.data.datasets[5].data.push({
+            x: Date.now(),
+            y: Mot.LM
+        });
+        chart.data.datasets[6].data.push({
+            x: Date.now(),
+            y: Mot.RM
+        });
+    });
+    socket.on('timer', function (timer) {
+        console.log('PIDout van server ontvangen' + JSON.stringify(timer, null, 4));
+        chart.data.datasets[7].data.push({
+            x: Date.now(),
+            y: timer
+        });
+    });*/
+}
+
+
+var width = 500;
+var barHeight = 100;
+var padding = 1;
+var ctx = document.getElementById('myChart').getContext('2d');
+var chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+        datasets: [{
+            label: 'Snelheid',
+            borderColor: 'rgb(54, 162, 235)',
+            backgroundColor: 'rgba(54, 162, 235, 0.5)',
+            data: []
+        }, {
+            label: 'targetheading',
+            borderColor: 'rgb(0, 255, 0)',
+            backgroundColor: 'rgba(255, 255, 255, 0)',
+            data: []
+        }, {
+            label: 'Heading',
+            borderColor: 'rgb(0 ,125, 0)',
+            backgroundColor: 'rgba(255, 255, 255, 0)',
+            data: []
+        }, {
+            label: 'AngleError',
+            borderColor: 'rgb(33, 0, 0)',
+            backgroundColor: 'rgba(255, 255, 255, 0)',
+            data: []
+        }, {
+            label: 'PIDout',
+            borderColor: 'rgb(170,0,255)',
+            backgroundColor: 'rgba(255, 255, 255, 0)',
+            data: []
+        }, {
+            label: 'LM',
+            borderColor: 'rgb(255, 0, 0)',
+            backgroundColor: 'rgba(255, 255, 255, 0)',
+            data: []
+        }, {
+            label: 'RM',
+            borderColor: 'rgb(0, 0, 255)',
+            backgroundColor: 'rgba(255, 255, 255, 0)',
+            data: []
+        }, {
+            label: 'timer',
+            borderColor: 'rgb(0, 255, 255)',
+            backgroundColor: 'rgba(255, 255, 255, 0)',
+            data: []
+        }]
+    },
+    options: {
+        scales: {
+            xAxes: [{
+                type: 'realtime'
+            }]
+        }
+    }
+});
+
+function updateSpeed1(data) { //gpsdata ontvangen 
+    //console.log('data.bearing = '+ JSON.stringify(data, null, 4));
+    te = t1 - Date.now();
+    t1 = Date.now();
+    var speed = data.speed;
+    //textSpeed.text(speed);
+
+    // append the new data to the existing chart data
+    chart.data.datasets[0].data.push({
+        x: Date.now(),
+        y: speed * 10
+    });
+    chart.data.datasets[2].data.push({
+        x: Date.now(),
+        y: data.bearing
+    });
+    chart.update({
+        preservation: true
+    })
+    //var newwidth = $('.chartAreaWrapper2').width(); // te/100;// maak chart scrollable was 50 //http://jsfiddle.net/jmpxgufu/
+    //$('.chartAreaWrapper2').width(newwidth);
+    /*$('.chartAreaWrapper').animate({
+        scrollLeft: newwidth
+    });*/
+}

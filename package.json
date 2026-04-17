@@ -1,0 +1,52 @@
+{
+  "name": "mowpi63-3b2",
+  "version": "12.18.4",
+  "private": true,
+  "main": "./bin/www",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "node ./bin/www.js",
+    "start:devOud": "DEBUG=express:* sudo ./node_modules/.bin/nodemon -e js,mjs,json,pug,css bin/www",
+    "devstart": "Debug=mowpi202303leaflet:* & nodemon ./bin/www",
+    "start:dev": "sudo node ./bin/www",
+    "debug": "inspect-brk start:dev node",
+    "build": "webpack",
+    "build:dev": "webpack-dev-server",
+    "test": "mocha test/index.test.js"
+  },
+  "dependencies": {
+    "cookie-parser": "~1.4.6",
+    "debug": "^4.3.4",
+    "eslint": "^8.26.0",
+    "express": "~4.18.1",
+    "geodesy": "2.2.1",
+    "geographiclib": "^1.51.0",
+    "gps": "^0.5.3",
+    "http-errors": "~1.6.3",
+    "i2c-bus": "^5.2.2",
+    "i2c-mpu6050": "^2.3.0",
+    "kalman": "0.0.2",
+    "mocha": "^10.2.0",
+    "morgan": "~1.9.1",
+    "node-pid-controller": "^1.0.1",
+    "pigpio": "^3.3.1",
+    "pug": "^3.0.2",
+    "serialport": "^10.5.0",
+    "socket.io": "^4.5.1",
+    "split": "^1.0.1",
+    "sylvester": "0.0.21",
+    "udplus": "^1.2.1",
+    "utm": "^1.1.1",
+    "vue": "^3.2.31"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.7",
+    "@types/node": "^14.0.27",
+    "inspect-brk": "^0.1.2",
+    "ts-node": "^8.10.2",
+    "typescript": "^3.9.10",
+    "webpack": "^5.73.0",
+    "webpack-cli": "^4.10.0",
+    "webpack-dev-server": "^4.9.0"
+  }
+}

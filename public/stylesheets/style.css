@@ -1,0 +1,71 @@
+body {
+  padding: 5px;
+  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+}
+
+a {
+  color: #00B7FF;
+}
+#containerMain {
+  height: 500px;
+}
+
+#map {
+    height: 50%;
+}
+
+#parentDiv {
+    width: 100%;
+    overflow: auto;
+    height: 50%;
+}
+
+#myChart {
+    height: 500px !important;
+}
+
+.chartWrapper {
+    position: relative;
+}
+
+.chartWrapper>canvas {
+    position: absolute;
+    left: 0;
+    top: 0;
+    pointer-events: none;
+}
+
+.chartAreaWrapper {
+    overflow-x: scroll;
+    position: relative;
+    width: 100%;
+}
+
+.chartAreaWrapper2 {
+    position: relative;
+    height: 500px;
+}
+.custom-control.custom-switch {
+    padding: .5rem 0.5rem 0rem 3.5rem;
+    color: rgba(255,255,255,.5);
+    
+}
+.label {
+    display: inline-block;
+    text-align: right;
+    width: 250px;
+}
+.value {
+    display: inline-block;
+    text-align: left;
+    width: 60px;
+}
+.control {
+    width: 200px;
+}
+.text-center {
+    text-align: center!important;
+}
+#bootstrap-overrides .form-control { /* 100+1=101 priority score, yay! werkt niet */
+    line-height: 1;
+}

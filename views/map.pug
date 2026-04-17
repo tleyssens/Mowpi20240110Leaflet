@@ -1,0 +1,64 @@
+
+extends mapLayout
+
+block content
+  //cc:MapUI#1;Layout opzetten
+  //h1= s.driveEnable
+  //p Welcome to #{title}
+  .row
+    .col-sm-3
+      #quality {{qualitydata}}
+    .col-sm-3
+      #waypoint {{waypointdata}}
+    .col-sm-3
+      #goalPointDistance {{goalPointDistancedata}}  
+  .row
+    .col-sm-9
+      #map(style="height:400px;width:100%;")
+      //#leafletMap(style="height:400px;width:100%;")
+    .col-sm-3
+      #containerMain
+      #joystickResult
+      //button(type='button' id='RPiAfsluiten' class='btn btn-primary') RPI afsluiten
+      //button(type='button' id='simulatie' class='btn btn-primary') Simulatie
+      input(type="range" id="SpeedSlider" min="0" max="255" value="255")
+      p Speed: <span id="SpeedSliderValue"> 
+  .row 
+    .col-sm-3
+      input(type="range" id="Pslider" min="0" max="10000" value="2000")
+      p P Value: <span id="Pvalue">
+    .col-sm-3
+      input(type="range" id="Islider" min="0" max="3000" value="100")
+      p I Value: <span id="Ivalue">
+    .col-sm-3
+      input(type="range" id="Dslider" min="0" max="3000" value="150")
+      p D Value: <span id="Dvalue">
+    .col-sm-3
+      input(type="range" id="pureSlider" min="0" max="10000" value="0")
+      p PurePursuit Value: <span id="pureValue">
+
+    #targetDist {{targetDist}}
+    .container
+      .text-center
+        span(class='label') pause:
+          span(class='value' id='pauseValue' ) false
+          input(type="checkbox" id="pause" class="control")
+  canvas(id="myChart")
+  .dropdown
+  button.btn.btn-secondary.dropdown-toggle.col-sm-1(id='grafiekDD' data-bs-toggle='dropdown' aria-expanded='false') Grafiek Openen
+  ul(class='dropdown-menu' aria-labelledby='dropdownMenuButton')
+    //a.dropdown-item(href='#' id='contourOpenen') Openen
+    a.dropdown-item(href='#' id='grafiek1openen' data-bs-toggle='modal' data-bs-target='#GrafiekOpenen1') Grafiek1
+    a.dropdown-item(href='#' id='grafiek2openen' data-bs-toggle='modal' data-bs-target='#GrafiekOpenen2') Grafiek2
+    
+  //#jsoneditor(style={width: "400px", height: "400px"})
+    //#NMEA
+  .form-group
+    label(for='exampleFormControlTextarea2') NMEA data
+    textarea(class='form-control rounded-0' id='NMEA' rows="4") {{gpsData}}
+  .form-group
+    label(for='exampleFormControlTextarea3') settings data
+    textarea(class='form-control rounded-0' id='settings' rows="25") {{settingsdata}}
+
+  #dialog(style="display:none;")
+    input(type="file" nwsaveas)

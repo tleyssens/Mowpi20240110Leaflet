@@ -1,0 +1,60 @@
+var s = require('../bin/settings.json') //laad json-data uit bestand
+var mower = require('../lib/Mower')
+
+//cc:touchbesturing#4; Steering doorgeven naar steeringMath
+exports.KeyReceived = function (data) {
+	//console.log('in KeyReceived');
+	//console.log(data);
+	switch (data.Key) {
+		case "Steering":
+			var X = parseFloat(data.steer);
+      var Y = parseFloat(data.speed);
+      steeringMath(X, Y);
+			break;
+		case "clickTarget":
+			s.pos.target.lat = data.value.latLng.lat;
+			s.pos.target.lon = data.value.latLng.lng;
+			//traject.push(data.value.latLng);
+			//io.emit('log', 'punt toegevoegd aan traject: ' + JSON.stringify(traject, null, 4));
+			break;
+		case "Pvalue":
+			console.log('Pvalue = ' + JSON.stringify(data, null, 4));
+			//ctr.k_p = data.value;
+			break;
+		case "Ivalue":
+			console.log('Ivalue = ' + JSON.stringify(data, null, 4));
+			//ctr.k_i = data.value;
+			break;
+		case "Dvalue":
+			console.log('Dvalue = ' + JSON.stringify(data, null, 4));
+			//ctr.k_d = data.value;
+			break;   
+	}
+}
+//cc:touchbesturing#5; Motorsnelheden bepalen 
+function steeringMath(X, Y) { //sturen met touchscreen
+  //console.log('in steeringMath X:%s, Y:%s', X, Y);
+  var V = (250 - Math.abs(X)) * (Y / 250) + Y;
+  var W = (250 - Math.abs(Y)) * (X / 250) + X;
+  var LM = (V + W) / 2; // - 17;
+  var RM = (V - W) / 2; // + 4;
+  let Mot = {
+    'PIDout': 0,
+    'LM': LM,
+    'RM': RM
+  };
+  console.log('in scocketFunc steeringMath X:%s, Y:%s, LM:%s, RM:%s', X, Y, LM, RM);
+  //io.emit('Mot', Mot);
+  if (s.driveEnable) {
+    //max snelheid instellen
+    s.LM = map_range(LM, 250, -250, 255, -255)
+    s.RM = map_range(RM, 250, -250, 255, -255)
+    mower.drive(s.LM,s.RM)
+  } else {
+    mower.stop()   
+  };
+}
+
+function map_range(value, low1, high1, low2, high2) {
+  return low2 + (high2 - low2) * (value - low1) / (high1 - low1);
+}

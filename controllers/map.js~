@@ -1,0 +1,4 @@
+exports.index = function(req, res, next) {
+	res.render('map', { title: 'MowPiMap', version: '63',s: req.app.locals.s}); 
+	//console.log(req.app.locals.s)//werkt
+}

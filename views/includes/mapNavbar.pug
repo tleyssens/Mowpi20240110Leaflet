@@ -1,0 +1,61 @@
+
+nav.navbar.navbar-expand-sm.navbar-dark.bg-dark
+  a.navbar-brand(href='/') MowPi #{version}
+  button.btn.btn-secondary(id='reset') Reset
+  .dropdown
+  button.btn.btn-secondary.dropdown-toggle.col-sm-1(id='contourDD' data-bs-toggle='dropdown' aria-expanded='false') Contour
+  ul(class='dropdown-menu' aria-labelledby='dropdownMenuButton')
+    a.dropdown-item(href='#' id='contourOpnemen') Opnemen
+    //a.dropdown-item(href='#' id='contourOpenen') Openen
+    a.dropdown-item(href='#' id='contourOpenen' data-bs-toggle='modal' data-bs-target='#ContourOpenen') Openen
+    a.dropdown-item(href='#' id='contourTonen') Tonen
+    a.dropdown-item(href='#' id='contourOplaan') Opslaan
+    a.dropdown-item(href='#' id='contourWissen') Wissen
+  .form-check.form-switch.col-sm-1
+    input(type='checkbox' class='form-check-input' id='customSwitchDriveEnable')
+    label(class='form-check-label text-white' for='customSwitchDriveEnable') Drive Enable
+  .form-check.form-switch.col-sm-1
+    input(type='checkbox' class='form-check-input' id='customSwitchTest')
+    label(class='form-check-label text-white' for='customSwitchTest') Slow Test
+  .form-check.form-switch.col-sm-1
+    input(type='checkbox' class='form-check-input' id='customSwitchAutoMow')
+    label(class='form-check-label text-white' for='customSwitchAutoMow') Automatisch
+  .form-check.form-switch.col-sm-1
+    input(type='checkbox' class='form-check-input' id='customSwitchMes')
+    label(class='form-check-label text-white' for='customSwitchMes') MES
+  .nav-item.dropdown
+    a.nav-link.dropdown-toggle(role='button' href='#' id='NMEAsource' data-bs-toggle='dropdown') NMEA bron
+    .dropdown-menu
+      a.dropdown-item(href="#" id='keuzeGPS') GPS
+      a.dropdown-item(href='#' id='keuzeGPSudp') GPSudp
+      a.dropdown-item(href="#" id='keuzeGPSSimulatie') GPS Simulatie
+      a.dropdown-item(href="#" id='keuzeGPSudpSimulatie') GPSudp Simulatie
+      a.dropdown-item(href="#" id='keuzeFile') File
+  .form-check.form-switch.col-sm-1
+    input(type='checkbox' class='form-check-input' id='customSwitchNMEA')
+    label(class='form-check-label text-white' for='customSwitchNMEA') NMEA
+  .form-check.form-switch.col-sm-1
+    input(type='checkbox' class='form-check-input' id='customSwitchAutosteer')
+    label(class='form-check-label text-white' for='customSwitchAutosteer') Autosteer
+  .form-check.form-switch.col-sm-1
+    input(type='checkbox' class='form-check-input' id='customSwitchMission')
+    label(class='form-check-label text-white' for='customSwitchMission') Mission
+  .form-check.form-switch.col-sm-1
+    input(type='checkbox' class='form-check-input' id='customSwitchLog')
+    label(class='form-check-label text-white' for='customSwitchLog') Logs
+form(class="inputForm")
+  .inputbox
+    label mission
+    input(id="mission_input" type="text"  required)
+.modal.fade(id='ContourOpenen' tabindex='-1' role='dialog' aria-labelledby='exampleModalLabel' aria-hidden='true')
+  //form(action='/map#' method='POST')
+  .modal-dialog
+      .modal-content
+        .modal-header
+          h5.modal-title(id='exampleModalLabel') Kies contourbestand
+          button.btn-close(data-bs-dismiss='modal' aria-label='Close')
+        .modal-body
+          p(id='fileList')
+        .modal-footer
+          button.btn.btn-secondary(data-bs-dismiss='modal') Close
+          a.button.btn.btn-primary(id='LoadMission') Load Mission
