@@ -1,3 +1,0 @@
-In controllers/NMEAstream.js kan je de snelheid van simuleren instellen => normaal 200 snel = 50
-
-ALT + Shift + P -> Format Document
