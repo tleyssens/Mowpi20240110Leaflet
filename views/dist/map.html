@@ -530,9 +530,11 @@ socket.on('s', function(GUI) {
         x: Date.now(),
         y: GUI.RM
     })
-    chart.update({
-        preservation: true
-    })
+    chart.update('none'
+        //{
+        //voor20260418 => preservation: true none zou sneller zijn
+        //}
+    )
     updateAngleIMU(GUI.angleIMU)
     //editor.set(GUI.contour.recList)
     //var newwidth = $('.chartAreaWrapper2').width(); // te/100;// maak chart scrollable was 50 //http://jsfiddle.net/jmpxgufu/
@@ -1268,6 +1270,21 @@ var config = {
         }]
     },
     options: {
+        plugins: {
+            decimation: {
+                enabled: true,
+                algorithm: 'lttb',
+                samples: 200
+            }
+        },
+        animation: false,
+            // { 
+            //     duration: 0 // general animation time//disable animations = tijdwinst 20201024
+            // },
+        hover: {
+            animationDuration: 0 // duration of animations when hovering an item//disable animations = tijdwinst
+        },
+        responsiveAnimationDuration: 0, // animation duration after a resize//disable animations = tijdwinst
         scales: {
             xAxes: [{
                 type: 'realtime',
@@ -1275,14 +1292,7 @@ var config = {
                     pause: false
                 }
             }]
-        },
-        animation: {
-            duration: 0 // general animation time//disable animations = tijdwinst 20201024
-        },
-        hover: {
-            animationDuration: 0 // duration of animations when hovering an item//disable animations = tijdwinst
-        },
-        responsiveAnimationDuration: 0 // animation duration after a resize//disable animations = tijdwinst
+        } 
     }
 }
 var chart = new Chart(ctx, config)
