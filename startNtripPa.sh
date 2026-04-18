@@ -1,1 +1,0 @@
-str2str -in tcpcli://pi2B11.local:5016 -out serial://ttyUSB0:57600:8:n:1:off

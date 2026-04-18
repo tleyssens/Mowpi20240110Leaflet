@@ -1,1 +1,0 @@
-../../rtk/str2str -in ntrip://pi4b.local:2101/AB1#rtcm3 -out serial://ttyUSB0:57600:8:n:1:off -out tcpsvr://:5000 -p 51.030454 5.182934 103.00 -s 100000 -n 5000nan

@@ -1,2 +1,7 @@
 node_modules/
 DubinsJS
+private/
+str2str
+str2str.trace
+*.js~
+
