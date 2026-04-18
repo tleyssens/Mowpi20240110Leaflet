@@ -107,7 +107,7 @@ var prevGpCircle = null;
 
 function initMap() {
   //wordt gestart vanuit maplayout.pug (callback=initMap)
-  console.log('in initMap ' + markers);
+  console.log('in initMap in scriptMap.dev.js' + markers);
   var alpha = 0.4; // smoothing factor
 
   /*var state = {

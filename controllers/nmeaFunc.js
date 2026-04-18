@@ -108,8 +108,11 @@ exports.KeyReceived = function (data) { //simulatie
       nmeaStream.nmea.stepDistance = map_range(Y, -250, 250, -0.2, 0.2);
       break;
     case "clickTarget":
-      s.pos.target.lat = data.value.latLng.lat;
-      s.pos.target.lon = data.value.latLng.lng;
+      if (!s.pos) s.pos = {}
+      s.pos.target = {
+        lat: data.value.latLng.lat,
+        lon: data.value.latLng.lng
+      };
       //traject.push(data.value.latLng);
       //io.emit('log', 'punt toegevoegd aan traject: ' + JSON.stringify(traject, null, 4));
       break;
