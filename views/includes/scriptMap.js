@@ -112,11 +112,11 @@ function initMap() { //wordt gestart vanuit maplayout.pug (callback=initMap)
     //var state = {lat: 51.05033956456792, lng: 5.304905256533743}; //PA
     var b = 0;
 
-    map = L.map('map', {center: mapLocation, zoom: 20, minZoom: 4, maxZoom: 25})
+    map = L.map('map', {center: mapLocation, zoom: 19, minZoom: 4, maxZoom: 25})
 
     const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-		maxZoom: 19,
-		maxNativeZoom: 19,
+		maxZoom: 23,        //zichtbare tegels uitrekken tot 
+		maxNativeZoom: 19,  //max zichtbare tegels
 		attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
 	}).addTo(map);
 
