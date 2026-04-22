@@ -183,7 +183,7 @@ function initMap() { //wordt gestart vanuit maplayout.pug (callback=initMap)
     });**/
     let line1 = L.polyline([], {color: 'green'})
 
-    var missionLine = L.polyline([], {color: '#FFFF00'})
+    var missionLine = L.polyline([], {color: '#FFFF00', weight: 3})
 
     $("#draw a").click(function (e) {
         //	 e.preventDefault();

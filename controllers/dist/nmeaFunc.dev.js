@@ -130,8 +130,8 @@ exports.KeyReceived = function (data) {
     case "clickTarget":
       if (!s.pos) s.pos = {};
       s.pos.target = {
-        lat: data.value.latLng.lat,
-        lon: data.value.latLng.lng
+        lat: data.value.lat,
+        lon: data.value.lng
       }; //traject.push(data.value.latLng);
       //io.emit('log', 'punt toegevoegd aan traject: ' + JSON.stringify(traject, null, 4));
 

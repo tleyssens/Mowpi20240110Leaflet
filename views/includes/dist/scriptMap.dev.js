@@ -107,7 +107,7 @@ var prevGpCircle = null;
 
 function initMap() {
   //wordt gestart vanuit maplayout.pug (callback=initMap)
-  console.log('in initMap in scriptMap.dev.js' + markers);
+  console.log('in initMap in scriptMap.js' + markers);
   var alpha = 0.4; // smoothing factor
 
   /*var state = {
@@ -202,7 +202,8 @@ function initMap() {
     color: 'green'
   });
   var missionLine = L.polyline([], {
-    color: '#FFFF00'
+    color: '#FFFF00',
+    weight: 3
   });
   $("#draw a").click(function (e) {
     //	 e.preventDefault();
