@@ -13,7 +13,9 @@ s.GUI.mf.guidanceLineSteerAngle = 90;
 s.GUI.mf.avgSpeed = 0
 // gps gebruikt ? let pn = require('../bin/position.json') //position?
 //let TomGuidance = require("../lib/TomGuidance")
-var mower = require("../lib/MowerLeeg");
+// offline var mower = require("../lib/MowerLeeg");
+var mower = require("../lib/Mower");
+
 //var nmeaSim = require('./NMEAsimTom.js')
 var NMEAstream = require("./NMEAstream.js");
 
