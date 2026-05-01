@@ -402,7 +402,7 @@ function startParsing(stream, s, socketList) {
       //driveTest("via gps")
       mower.drive(s.GUI.LM, s.GUI.RM);
     } else {
-      //mower.stop() //simulatie valt uit anders?
+      mower.stop() //simulatie valt uit anders?
     }
     UpdateFixPosition(socketList);
     socketList.emit('s', s.GUI);

@@ -1,5 +1,5 @@
 {
-  "driveEnable": true,
+  "driveEnable": false,
   "GUI": {
     "INFO": "info",
     "Autosteer": false,

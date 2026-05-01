@@ -429,7 +429,8 @@ function startParsing(stream, s, socketList) {
       // Motoren aansturen
       //driveTest("via gps")
       mower.drive(s.GUI.LM, s.GUI.RM);
-    } else {//mower.stop() //simulatie valt uit anders?
+    } else {
+      mower.stop(); //simulatie valt uit anders?
     }
 
     UpdateFixPosition(socketList);
