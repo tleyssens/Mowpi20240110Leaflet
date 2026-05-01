@@ -4,9 +4,9 @@ var debugAutosteer = require("debug")("tom:autosteer"),
     s = require("../bin/settings.json"),
     GPS = require("gps"),
     //offline => 
-//mower = require("../lib/MowerLeeg");
-//Real =>
-mower = require("../lib/Mower");
+mower = require("../lib/MowerLeeg"); //Real =>
+//mower = require("../lib/Mower");
+
 
 exports.update = function (gps, socketList) {
   debugAutosteer("in autosteer.update");

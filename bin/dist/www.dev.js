@@ -5,9 +5,16 @@
  */
 "use strict";
 
-var s = require('./settings.json'); //if (s.plaats === "pa") { s.contour.recList = s.contour.recListPa}
-//if (s.plaats === "tom") { s.contour.recList = s.contour.recListTom}
+var s = require('./settings.json');
 
+module.exports = {
+  s: s,
+  constants: require('../lib/constants'),
+  //Mower:      require("../lib/MowerLeeg") //simulatie
+  Mower: require('../lib/Mower') //met gpio
+
+}; //if (s.plaats === "pa") { s.contour.recList = s.contour.recListPa}
+//if (s.plaats === "tom") { s.contour.recList = s.contour.recListTom}
 
 var nmeaFunc = require('../controllers/nmeaFunc');
 /**
@@ -72,6 +79,8 @@ var TomGuidance = require('../lib/TomGuidance');
 var TomABLine = require('../lib/TomABLine');
 
 var TomVehicle = require('../lib/TomVehicle');
+
+var constants = require('../lib/constants');
 
 var Guidance = new TomGuidance(); //s.gyd = new TomGuidance()
 

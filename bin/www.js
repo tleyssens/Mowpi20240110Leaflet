@@ -4,6 +4,16 @@
  * Load shared settings-data 
  */
 var s = require('./settings.json')
+
+module.exports = {
+  s: s,
+  constants:  require('../lib/constants'),
+  //Mower:      require("../lib/MowerLeeg") //simulatie
+  Mower:    require('../lib/Mower') //met gpio
+}
+
+
+
 //if (s.plaats === "pa") { s.contour.recList = s.contour.recListPa}
 //if (s.plaats === "tom") { s.contour.recList = s.contour.recListTom}
 let nmeaFunc = require('../controllers/nmeaFunc')
@@ -36,6 +46,10 @@ app.set('port', port);
 //console.log(q)
 //console.log(app.settings.s)
 
+
+
+
+
 /**
  * Create HTTP server.
  */
@@ -60,7 +74,8 @@ server.on('listening', onListening);
 var socketApi = require('../socketApi')(s);
 let TomGuidance = require('../lib/TomGuidance')
 let TomABLine = require('../lib/TomABLine')
-let TomVehicle = require('../lib/TomVehicle')
+let TomVehicle = require('../lib/TomVehicle');
+const constants = require('../lib/constants');
 
 let Guidance = new TomGuidance()
 //s.gyd = new TomGuidance()

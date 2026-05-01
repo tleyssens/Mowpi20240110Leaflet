@@ -1,19 +1,20 @@
 "use strict"; // gebruikt in simulatie
 
-var debugNmeaFunc = require("debug")("tom1:NmeaFunc");
+var _require = require('../bin/www'),
+    constants = _require.constants,
+    Mower = _require.Mower,
+    s = _require.s;
 
-var constants = require("../lib/constants");
+var debugNmeaFunc = require("debug")("tom1:NmeaFunc");
 
 var dgram = require("dgram");
 
 var vec2 = require("../lib/vec");
 
-var _require = require("../lib/vec3"),
-    vec3 = _require.vec3;
+var _require2 = require("../lib/vec3"),
+    vec3 = _require2.vec3;
 
-var vecFix2Fix = require("../lib/vec3").vecFix2Fix;
-
-var s = require("../bin/settings.json"); //laad json-data uit bestand
+var vecFix2Fix = require("../lib/vec3").vecFix2Fix; //var s = require("../bin/settings.json"); //laad json-data uit bestand
 
 
 var autosteer = require("./autosteer");
@@ -23,10 +24,8 @@ s.GUI.mf.fixHeading = 0.0;
 s.GUI.mf.guidanceLineSteerAngle = 90;
 s.GUI.mf.avgSpeed = 0; // gps gebruikt ? let pn = require('../bin/position.json') //position?
 //let TomGuidance = require("../lib/TomGuidance")
-// offline var mower = require("../lib/MowerLeeg");
 
-var mower = require("../lib/Mower"); //var nmeaSim = require('./NMEAsimTom.js')
-
+var mower = Mower; //var nmeaSim = require('./NMEAsimTom.js')
 
 var NMEAstream = require("./NMEAstream.js"); // Teleplot
 
@@ -37,8 +36,8 @@ var lastData = "",
     lastTime = "";
 var prevQuality = '';
 
-var _require2 = require("child_process"),
-    execFile = _require2.execFile; //const { isNullOrUndefined } = require('util');
+var _require3 = require("child_process"),
+    execFile = _require3.execFile; //const { isNullOrUndefined } = require('util');
 
 
 var split = require("split");

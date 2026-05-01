@@ -1,11 +1,11 @@
 "use strict"; // gebruikt in simulatie
+let {constants, Mower, s} = require('../bin/www');
 let debugNmeaFunc = require("debug")("tom1:NmeaFunc");
-const constants = require("../lib/constants");
 const dgram = require("dgram");
 let vec2 = require("../lib/vec");
 const { vec3 } = require("../lib/vec3");
 const vecFix2Fix = require("../lib/vec3").vecFix2Fix;
-var s = require("../bin/settings.json"); //laad json-data uit bestand
+//var s = require("../bin/settings.json"); //laad json-data uit bestand
 let autosteer = require("./autosteer");
 s.GUI.mf.guidanceLookPos = new vec2(0, 0);
 s.GUI.mf.fixHeading = 0.0;
@@ -13,8 +13,7 @@ s.GUI.mf.guidanceLineSteerAngle = 90;
 s.GUI.mf.avgSpeed = 0
 // gps gebruikt ? let pn = require('../bin/position.json') //position?
 //let TomGuidance = require("../lib/TomGuidance")
-// offline var mower = require("../lib/MowerLeeg");
-var mower = require("../lib/Mower");
+var mower = Mower;
 
 //var nmeaSim = require('./NMEAsimTom.js')
 var NMEAstream = require("./NMEAstream.js");
