@@ -8,7 +8,7 @@ class Mower {
 		var Motor = require('./TomMotor.js') //geo = require('.lib/TomGeolib.js'), bij in gps.js gezet
 		
 		this.LMotor = new Motor.Setup(11, 10, 9, 10, 255)//13, 19, 26, 10, 255) //22,27,17		
-		this.RMotor = new Motor.Setup(23, 27, 17, 10, 255)//16, 20, 21, 10, 255), //11,10,9 // 23 was 22 (22 is stuk)
+		this.RMotor = new Motor.Setup(26, 27, 17, 10, 255)//16, 20, 21, 10, 255), //11,10,9 // 23 was 22 (22 is stuk)
 		this.simulatie = false // dit moet je vanaf nu herzetten op false anders worden de motoren niet aangestuurd
 		this.state = "ready"
 		this.wheelBaseCm = 47
