@@ -1,4 +1,5 @@
 module.exports = function (s) { //Tom: bijgezet
+    const { Mower } = require("./bin/config");
     var SocketApiDebug = require('debug')('tom:socketApi')
     var socket_io = require('socket.io')
     var io = socket_io()
@@ -12,8 +13,7 @@ module.exports = function (s) { //Tom: bijgezet
     //const common = require('./controllers/common.js')
     var GPS = require('gps')
     socketApi.io = io;
-    var mower //==>geen risico op aansturen motoren?
-    //var mower = require('./lib/Mower')
+    var mower = Mower;
     let sensoraanwezig = false
     //let sim = new common.simu()
     //var nmeaSim = require('./controllers/NMEAsimTom.js')

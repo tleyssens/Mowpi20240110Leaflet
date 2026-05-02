@@ -1,6 +1,8 @@
 "use strict"; // gebruikt in simulatie
-let {constants, Mower, s} = require('../bin/www');
+const { s, constants, Mower } = require("../bin/config");
+
 let debugNmeaFunc = require("debug")("tom1:NmeaFunc");
+//const constants = require("../lib/constants");
 const dgram = require("dgram");
 let vec2 = require("../lib/vec");
 const { vec3 } = require("../lib/vec3");

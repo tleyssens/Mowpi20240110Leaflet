@@ -3,16 +3,7 @@
 /**
  * Load shared settings-data 
  */
-var s = require('./settings.json')
-
-module.exports = {
-  s: s,
-  constants:  require('../lib/constants'),
-  //Mower:      require("../lib/MowerLeeg") //simulatie
-  Mower:    require('../lib/Mower') //met gpio
-}
-
-
+const { s, constants, Mower } = require("./config");
 
 //if (s.plaats === "pa") { s.contour.recList = s.contour.recListPa}
 //if (s.plaats === "tom") { s.contour.recList = s.contour.recListTom}
@@ -29,8 +20,7 @@ var http = require('http');
 const {
   monitorEventLoopDelay
 } = require('perf_hooks');
-var mower
-//var mower = require('../lib/Mower')
+var mower = Mower;
 
 /**
  * Get port from environment and store in Express.
