@@ -3,7 +3,7 @@
 /**
  * Load shared settings-data 
  */
-const { s, constants, Mower } = require("./config");
+const { s, Mower } = require("./config");
 
 //if (s.plaats === "pa") { s.contour.recList = s.contour.recListPa}
 //if (s.plaats === "tom") { s.contour.recList = s.contour.recListTom}
@@ -65,7 +65,6 @@ var socketApi = require('../socketApi')(s);
 let TomGuidance = require('../lib/TomGuidance')
 let TomABLine = require('../lib/TomABLine')
 let TomVehicle = require('../lib/TomVehicle');
-const constants = require('../lib/constants');
 
 let Guidance = new TomGuidance()
 //s.gyd = new TomGuidance()
