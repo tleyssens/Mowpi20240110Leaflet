@@ -3,7 +3,8 @@
 /**
  * Load shared settings-data 
  */
-var s = require('./settings.json')
+const { s, constants, Mower } = require("./config");
+
 //if (s.plaats === "pa") { s.contour.recList = s.contour.recListPa}
 //if (s.plaats === "tom") { s.contour.recList = s.contour.recListTom}
 let nmeaFunc = require('../controllers/nmeaFunc')
@@ -19,8 +20,7 @@ var http = require('http');
 const {
   monitorEventLoopDelay
 } = require('perf_hooks');
-var mower
-//var mower = require('../lib/Mower')
+var mower = Mower;
 
 /**
  * Get port from environment and store in Express.

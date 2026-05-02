@@ -5,7 +5,10 @@
  */
 "use strict";
 
-var s = require('./settings.json'); //if (s.plaats === "pa") { s.contour.recList = s.contour.recListPa}
+var _require = require("./config"),
+    s = _require.s,
+    constants = _require.constants,
+    Mower = _require.Mower; //if (s.plaats === "pa") { s.contour.recList = s.contour.recListPa}
 //if (s.plaats === "tom") { s.contour.recList = s.contour.recListTom}
 
 
@@ -23,11 +26,10 @@ var util = require('util');
 
 var http = require('http');
 
-var _require = require('perf_hooks'),
-    monitorEventLoopDelay = _require.monitorEventLoopDelay;
+var _require2 = require('perf_hooks'),
+    monitorEventLoopDelay = _require2.monitorEventLoopDelay;
 
-var mower; //var mower = require('../lib/Mower')
-
+var mower = Mower;
 /**
  * Get port from environment and store in Express.
  */

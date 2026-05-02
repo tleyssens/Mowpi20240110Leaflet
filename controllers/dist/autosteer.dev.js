@@ -1,12 +1,12 @@
 "use strict";
 
+var _require = require("../bin/config"),
+    s = _require.s,
+    Mower = _require.Mower;
+
 var debugAutosteer = require("debug")("tom:autosteer"),
-    s = require("../bin/settings.json"),
     GPS = require("gps"),
-    //offline => 
-//mower = require("../lib/MowerLeeg");
-//Real =>
-mower = require("../lib/Mower");
+    mower = Mower;
 
 exports.update = function (gps, socketList) {
   debugAutosteer("in autosteer.update");

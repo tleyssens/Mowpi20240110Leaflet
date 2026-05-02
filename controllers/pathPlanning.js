@@ -1,9 +1,9 @@
 "use strict"
+const { s, Mower } = require("../bin/config");
 //const { stopStream1 } = require('./nmeaFunc');
-var mower
-//var mower = require('../lib/Mower')
-var s = require('../bin/settings.json'),
-    GPS = require('gps'),
+var mower = Mower;
+
+var GPS = require('gps'),
     positions = []
 
 exports.update = function (gps) {
