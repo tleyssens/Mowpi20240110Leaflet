@@ -1,22 +1,18 @@
 // class/StateManager.js
-// Beheert globale state op centraal punt - refactor van losse s object
-
 class StateManager {
-    constructor(initialState) {
-        this.state = { ...initialState };
+    constructor(initialState = {}) {
+        this.state = JSON.parse(JSON.stringify(initialState));
         this.io = null;
     }
 
     set(key, value) {
-        // Ondersteunt geneste keys zoals 'GUI.MaaiMES' of 'mission.active'
         const keys = key.split('.');
         let obj = this.state;
         for (let i = 0; i < keys.length - 1; i++) {
-            if (!obj[keys[i]]) obj[keys[i]] = {};
+            if (obj[keys[i]] === undefined) obj[keys[i]] = {};
             obj = obj[keys[i]];
         }
         obj[keys[keys.length - 1]] = value;
-
         this.emitChange(key, value);
         return value;
     }
@@ -26,8 +22,7 @@ class StateManager {
         const keys = key.split('.');
         let obj = this.state;
         for (let k of keys) {
-            if (obj === undefined) return undefined;
-            obj = obj[k];
+            obj = obj ? obj[k] : undefined;
         }
         return obj;
     }
@@ -43,8 +38,10 @@ class StateManager {
 
     emitChange(key, value) {
         if (this.io) {
-            this.io.sockets.emit('state', this.get('GUI'));
-            this.io.sockets.emit('s', this.state);
+            // Volledige backward compatibility voor client
+            const fullState = this.get();
+            this.io.emit('s', fullState);
+            this.io.emit('state', fullState.GUI || fullState);
         }
     }
 }

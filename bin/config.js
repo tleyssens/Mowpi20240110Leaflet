@@ -1,18 +1,21 @@
-const useSimulation = true; //Zet op false om hardware aan te sturen
+// bin/config.js - updated for StateManager
 
+const fs = require('fs');
+const path = require('path');
 const StateManager = require('../class/StateManager');
-var initialState = require('./settings.json');
-const constants = require('../lib/constants');
 
-const Mower  = useSimulation
-  ? require("../lib/MowerLeeg")
-  : require("../lib/Mower");
+let rawdata = fs.readFileSync(path.join(__dirname, 'settings.json'));
+let settings = JSON.parse(rawdata);
 
-const stateManager = new StateManager(initialState);
+// Create StateManager
+const stateManager = new StateManager(settings);
 
+// Backward compatibility
+const s = stateManager;
+
+// Export both
 module.exports = {
-    s: stateManager,           // backward compatibility
-    stateManager,
-    constants,
-    Mower,
+    s: s,
+    stateManager: stateManager,
+    Mower: settings.Mower || 'real'  // keep existing
 };
