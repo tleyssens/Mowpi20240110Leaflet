@@ -27,7 +27,7 @@ waypoint = new Vue({
 targetDist = new Vue({
     el: "#targetDist",
     data: {
-        targetDist: "Hier komt de targetDistance"
+        targetDistdata: "targetDist"
     },
 })
 goalPointDistance = new Vue({
@@ -36,6 +36,17 @@ goalPointDistance = new Vue({
         goalPointDistancedata: "goalPointDistance"
     },
     methods: {}
+})
+distanceFromCurrentLinePivot = new Vue({
+    el: "#distanceFromCurrentLinePivot",
+    data: {
+        distanceFromCurrentLinePivotdata: "distanceFromCurrentLinePivot"
+    },
+    methods: {}
+})
+socket.on('distanceFromCurrentLinePivot', function (data) { 
+    console.log("socket=>distanceFromCurrentLinePivot ontvangen" + data)
+    distanceFromCurrentLinePivot.distanceFromCurrentLinePivot = data
 })
 socket.on('goalPointDistance', function (data) { 
     console.log("socket=>goalPointDistance ontvangen" + data)

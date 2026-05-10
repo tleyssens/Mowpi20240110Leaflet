@@ -63,7 +63,7 @@ function steeringMath(X, Y) {
   };
   console.log('in socketFunc steeringMath X:%s, Y:%s, LM:%s, RM:%s', X, Y, LM.toFixed(0), RM.toFixed(0)); //io.emit('Mot', Mot);
 
-  if (s.driveEnable) {
+  if (s.GUI.driveEnable) {
     //max snelheid instellen
     // s.GUI.LM = map_range(LM, 250, -250, 255, -255)
     // s.GUI.RM = map_range(RM, 250, -250, 255, -255)

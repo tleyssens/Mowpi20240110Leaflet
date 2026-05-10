@@ -112,7 +112,7 @@ function initMap() { //wordt gestart vanuit maplayout.pug (callback=initMap)
     //var state = {lat: 51.05033956456792, lng: 5.304905256533743}; //PA
     var b = 0;
 
-    map = L.map('map', {center: mapLocation, zoom: 19, minZoom: 4, maxZoom: 25})
+    map = L.map('map', {center: mapLocation, zoom: 21, minZoom: 4, maxZoom: 25})
 
     const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
 		maxZoom: 23,        //zichtbare tegels uitrekken tot 

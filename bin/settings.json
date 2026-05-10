@@ -1,6 +1,6 @@
 {
-  "driveEnable": false,
   "GUI": {
+    "driveEnable": false,
     "INFO": "info",
     "Autosteer": false,
     "MaaiMES": false,
@@ -62,20 +62,23 @@
       "minDistance": 0.05
     }
   },
+
   "AS": {
     "state": 0
   },
+
   "gpsHz": 10,
   "plaats": "pa",
   "motortype": "Hbrug",
-  
   
   "UDP": {
     "gpsPort": "9999",
     "simPort": "9998"
   },
+  
   "MaaiMES": false,
   "MAXBOUNDARIES": 6,
+  
   "simulatie": {
     "state": true,
     "type": 3,
@@ -84,6 +87,7 @@
     "speed": 0.5,
     "speedOud": 0.5
   },
+  
   "pid": {
     "kp": 0.8,
     "ki": 0.001,
@@ -95,6 +99,7 @@
     "kdoud": 0.15,
     "imaxOud": 45
   },
+  
   "debugDrive": false,
   "debugGPS": false,
   "debugPID": false,
@@ -125,6 +130,7 @@
   "minTurningRadius": 50,
   "maaiBreedte": 500,
   "maaiOverlap": 5,
+  
   "ABLine": {
     "set": false,
     "heading": 90,
@@ -139,8 +145,10 @@
       "easting": 1.1899409146465938
     },
     "rEastAB": 0,
-    "rNorthAB": 0
+    "rNorthAB": 0,
+    "goalPointDistance": 0.5
   },
+  
   "tom is start1 ": "Pa is start2 richting tom was 5",
   "start1": { "lat": 50.996328535, "lng": 5.3881682516666665, "richting": 90 },
   "start2": {
@@ -148,6 +156,7 @@
     "lng": 5.304913864941736,
     "richting": -15
   },
+  
   "mission": {
     "log": "log",
     "active": false,
@@ -194,6 +203,7 @@
       }
     }
   },
+  
   "contour": {
     "fileListStr": "",
     "prevInside": true,
@@ -215,12 +225,14 @@
     ],
     "recList": []
   },
+  
   "recPath": {
     "isRecordOn": false,
     "prevPos": { "lat": 0, "lng": 0 },
     "TriggerDistance": 0.5,
     "recList": []
   },
+  
   "mf": {
     "isAutoSteerBtnOn": false,
     "isPurePursuitUsed": true,

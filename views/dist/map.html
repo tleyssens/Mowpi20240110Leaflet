@@ -94,19 +94,25 @@
   <!--h1= s.driveEnable-->
   <!--p Welcome to #{title}-->
   <div class="row">
-    <div class="col-sm-3">
+    <div class="col-sm-1">
       <div id="quality">{{qualitydata}}</div>
     </div>
-    <div class="col-sm-3">
+    <div class="col-sm-2">
       <div id="waypoint">{{waypointdata}}</div>
     </div>
-    <div class="col-sm-3">
-      <div id="goalPointDistance">{{goalPointDistancedata}}  </div>
+    <div class="col-sm-1">
+      <div id="goalPointDistance">{{goalPointDistancedata}} </div>
+    </div>
+    <div class="col-sm-2">
+      <div id="distanceFromCurrentLinePivot">{{distanceFromCurrentLinePivotdata}}  </div>
+    </div>
+    <div class="col-sm-2"> 
+      <div id="targetDist">{{targetDistdata}}</div>
     </div>
   </div>
   <div class="row">
     <div class="col-sm-9">
-      <div id="map" style="height:400px;width:100%;"></div>
+      <div id="map" style="height:600px;width:100%;"></div>
       <!--#leafletMap(style="height:400px;width:100%;")-->
     </div>
     <div class="col-sm-3">
@@ -135,7 +141,6 @@
       <input type="range" id="pureSlider" min="0" max="10000" value="0">
       <p>PurePursuit Value: <span id="pureValue"></p>
     </div>
-    <div id="targetDist">{{targetDist}}</div>
     <div class="container">
       <div class="text-center"><span class="label">pause:<span class="value" id="pauseValue">false</span>
           <input class="control" type="checkbox" id="pause"></span></div>
@@ -507,7 +512,7 @@ socket.on('s', function(GUI) {
     });
     chart.data.datasets[1].data.push({
         x: Date.now(),
-        y: GUI.targetHeading
+        y: GUI.mf.guidanceLineSteerAngle//GUI.targetHeading
     });
     chart.data.datasets[2].data.push({
         x: Date.now(),
@@ -530,11 +535,9 @@ socket.on('s', function(GUI) {
         x: Date.now(),
         y: GUI.RM
     })
-    chart.update('none'
-        //{
-        //voor20260418 => preservation: true none zou sneller zijn
-        //}
-    )
+    chart.update({
+        preservation: true
+    })
     updateAngleIMU(GUI.angleIMU)
     //editor.set(GUI.contour.recList)
     //var newwidth = $('.chartAreaWrapper2').width(); // te/100;// maak chart scrollable was 50 //http://jsfiddle.net/jmpxgufu/
@@ -672,6 +675,17 @@ goalPointDistance = new Vue({
     },
     methods: {}
 })
+distanceFromCurrentLinePivot = new Vue({
+    el: "#distanceFromCurrentLinePivot",
+    data: {
+        distanceFromCurrentLinePivotdata: "distanceFromCurrentLinePivot"
+    },
+    methods: {}
+})
+socket.on('distanceFromCurrentLinePivot', function (data) { 
+    console.log("socket=>distanceFromCurrentLinePivot ontvangen" + data)
+    distanceFromCurrentLinePivot.distanceFromCurrentLinePivot = data
+})
 socket.on('goalPointDistance', function (data) { 
     console.log("socket=>goalPointDistance ontvangen" + data)
     goalPointDistance.goalPointDistancedata = data
@@ -789,7 +803,7 @@ let ppCircles = null
 let prevGpCircle = null
 
 function initMap() { //wordt gestart vanuit maplayout.pug (callback=initMap)
-    console.log('in initMap in map.html ' + markers)
+    console.log('in initMap in scriptMap.js' + markers)
     var alpha = 0.4; // smoothing factor
 
     /*var state = {
@@ -806,11 +820,11 @@ function initMap() { //wordt gestart vanuit maplayout.pug (callback=initMap)
     //var state = {lat: 51.05033956456792, lng: 5.304905256533743}; //PA
     var b = 0;
 
-    map = L.map('map', {center: mapLocation, zoom: 20, minZoom: 4, maxZoom: 25})
+    map = L.map('map', {center: mapLocation, zoom: 21, minZoom: 4, maxZoom: 25})
 
     const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-		maxZoom: 19,
-		maxNativeZoom: 19,
+		maxZoom: 23,        //zichtbare tegels uitrekken tot 
+		maxNativeZoom: 19,  //max zichtbare tegels
 		attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
 	}).addTo(map);
 
@@ -877,7 +891,7 @@ function initMap() { //wordt gestart vanuit maplayout.pug (callback=initMap)
     });**/
     let line1 = L.polyline([], {color: 'green'})
 
-    var missionLine = L.polyline([], {color: '#FFFF00'})
+    var missionLine = L.polyline([], {color: '#FFFF00', weight: 3})
 
     $("#draw a").click(function (e) {
         //	 e.preventDefault();
@@ -1270,21 +1284,6 @@ var config = {
         }]
     },
     options: {
-        plugins: {
-            decimation: {
-                enabled: true,
-                algorithm: 'lttb',
-                samples: 200
-            }
-        },
-        animation: false,
-            // { 
-            //     duration: 0 // general animation time//disable animations = tijdwinst 20201024
-            // },
-        hover: {
-            animationDuration: 0 // duration of animations when hovering an item//disable animations = tijdwinst
-        },
-        responsiveAnimationDuration: 0, // animation duration after a resize//disable animations = tijdwinst
         scales: {
             xAxes: [{
                 type: 'realtime',
@@ -1292,7 +1291,14 @@ var config = {
                     pause: false
                 }
             }]
-        } 
+        },
+        animation: {
+            duration: 0 // general animation time//disable animations = tijdwinst 20201024
+        },
+        hover: {
+            animationDuration: 0 // duration of animations when hovering an item//disable animations = tijdwinst
+        },
+        responsiveAnimationDuration: 0 // animation duration after a resize//disable animations = tijdwinst
     }
 }
 var chart = new Chart(ctx, config)

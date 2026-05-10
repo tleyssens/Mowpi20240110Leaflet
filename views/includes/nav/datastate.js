@@ -48,7 +48,7 @@ const initialJson = {
 //menu instellen
 socket.on("state", function (s) {
   console.log("state" + JSON.stringify(s, null, 4));
-  document.getElementById("customSwitchDriveEnable").checked = s.driveEnable;
+  document.getElementById("customSwitchDriveEnable").checked = s.GUI.driveEnable;
   document.getElementById("customSwitchAutoMow").checked = s.autoMow2;
   //document.getElementById('AutoMow').innerHTML = 'Automatisch = ' + s.autoMow2
   document.getElementById("customSwitchMes").checked = s.GUI.MaaiMES;

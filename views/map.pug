@@ -6,15 +6,19 @@ block content
   //h1= s.driveEnable
   //p Welcome to #{title}
   .row
-    .col-sm-3
+    .col-sm-1
       #quality {{qualitydata}}
-    .col-sm-3
+    .col-sm-2
       #waypoint {{waypointdata}}
-    .col-sm-3
-      #goalPointDistance {{goalPointDistancedata}}  
+    .col-sm-1
+      #goalPointDistance {{goalPointDistancedata}} 
+    .col-sm-2
+      #distanceFromCurrentLinePivot {{distanceFromCurrentLinePivotdata}}  
+    .col-sm-2 
+      #targetDist {{targetDistdata}}
   .row
     .col-sm-9
-      #map(style="height:400px;width:100%;")
+      #map(style="height:600px;width:100%;")
       //#leafletMap(style="height:400px;width:100%;")
     .col-sm-3
       #containerMain
@@ -37,7 +41,7 @@ block content
       input(type="range" id="pureSlider" min="0" max="10000" value="0")
       p PurePursuit Value: <span id="pureValue">
 
-    #targetDist {{targetDist}}
+    
     .container
       .text-center
         span(class='label') pause:
