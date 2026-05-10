@@ -125,13 +125,15 @@ function initMap() {
   var b = 0;
   map = L.map('map', {
     center: mapLocation,
-    zoom: 20,
+    zoom: 21,
     minZoom: 4,
     maxZoom: 25
   });
   var tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
+    maxZoom: 23,
+    //zichtbare tegels uitrekken tot 
     maxNativeZoom: 19,
+    //max zichtbare tegels
     attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
   }).addTo(map);
   var prevQuality = '';

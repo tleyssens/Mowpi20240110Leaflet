@@ -99,7 +99,7 @@ exports.update = function (gps) {
                 if(contains(s.contour.recList, gps.state.lat, gps.state.lon)) {
                 } else {
                     console.log('Buiten contour => stoppen')
-                    s.driveEnable = false
+                    s.GUI.driveEnable = false
                     gps.state.speed = 0
                     s.GUI.LM = 0
                     s.GUI.RM = 0

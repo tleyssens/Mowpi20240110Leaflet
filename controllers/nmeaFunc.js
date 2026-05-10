@@ -287,7 +287,7 @@ function startParsing(stream, s, socketList) {
       data.lon < -180 ||
       data.lon > 180
       ) {
-        //mower.stop()
+        mower.stop()
         socketList.emit('log', 'invalid data in nmeaFunc 277');
         gps.state.speed = 0
         return; //check valid values
@@ -396,7 +396,7 @@ function startParsing(stream, s, socketList) {
         noRTKteller++;
         socketList.emit('log','geen rtk = stoppen over %s seconden', 1 - noRTKteller/5)
       }
-      //mower.stop()
+      mower.stop()
     }
     if (s.GUI.driveEnable) {
       // Motoren aansturen
@@ -489,7 +489,7 @@ function startParsingUDP(udpClientGPS, s, socketList) {
               data.lon > 180
             ) {
               debugNmeaFunc(' 478 bad data')
-              //mower.stop()
+              mower.stop()
               //io.emit('log', 'invalid data');
               return; //check valid values
             }
@@ -599,14 +599,14 @@ function startParsingUDP(udpClientGPS, s, socketList) {
                 noRTKteller++;
                 //debugNmeaFunc('geen rtk = stoppen over %s seconden', 1 - noRTKteller/5)
               }
-              //mower.stop()
+              mower.stop()
             }
-            if (s.driveEnable) {
+            if (s.GUI.driveEnable) {
               // Motoren aansturen
               //driveTest("via gps")
               mower.drive(s.GUI.LM, s.GUI.RM);
             } else {
-              //mower.stop() //simulatie valt uit anders?
+              mower.stop() 
             }
             UpdateFixPosition(socketList);
             socketList.emit('s', s.GUI);

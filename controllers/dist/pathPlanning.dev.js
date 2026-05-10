@@ -1,9 +1,13 @@
-"use strict"; //const { stopStream1 } = require('./nmeaFunc');
+"use strict";
 
-var mower; //var mower = require('../lib/Mower')
+var _require = require("../bin/config"),
+    s = _require.s,
+    Mower = _require.Mower; //const { stopStream1 } = require('./nmeaFunc');
 
-var s = require('../bin/settings.json'),
-    GPS = require('gps'),
+
+var mower = Mower;
+
+var GPS = require('gps'),
     positions = [];
 
 exports.update = function (gps) {
@@ -119,7 +123,7 @@ exports.update = function (gps) {
 
         if (contains(s.contour.recList, gps.state.lat, gps.state.lon)) {} else {
           console.log('Buiten contour => stoppen');
-          s.driveEnable = false;
+          s.GUI.driveEnable = false;
           gps.state.speed = 0;
           s.GUI.LM = 0;
           s.GUI.RM = 0;

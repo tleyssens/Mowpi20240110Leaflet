@@ -28,7 +28,7 @@ exports.update = function (gps, socketList) {
                 s.ABLine.rEastAB,
                 s.ABLine.rNorthAB
               );
-            socketList.emit("futurePoint", s.nearestPointOnAB);
+            socketList.emit("futurePoint", s.nearestPointOnAB);// blauw kruisje = futurepoint
             s.goalPointOnAB = GPS.ConvertLocalToWGS84(
                 gps.latStart,
                 gps.lonStart,
@@ -36,7 +36,7 @@ exports.update = function (gps, socketList) {
                 s.ABLine.goalPointAB.northing
               );
               //debugNmeaFunc('goalpoint %s', s.goalPointOnAB)
-              socketList.emit("targetA", s.goalPointOnAB);
+              socketList.emit("targetA", s.goalPointOnAB); // rood cirkeltje = trajectPoint
               let radiusPoint = GPS.ConvertLocalToWGS84(
                 gps.latStart,
                 gps.lonStart,
