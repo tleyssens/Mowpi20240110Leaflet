@@ -3,7 +3,9 @@
 /**
  * Load shared settings-data 
  */
-const { s, stateManager, Mower } = require("./config");
+const config = require("./config");
+const s = config.s;  //oude compatibiliteit
+const stateManager = config.stateManager; //nieuwe StateManager
 
 let nmeaFunc = require('../controllers/nmeaFunc')
 
@@ -18,7 +20,7 @@ var http = require('http');
 const {
   monitorEventLoopDelay
 } = require('perf_hooks');
-var mower = Mower;
+const Mower = config.Mower
 
 /**
  * Get port from environment and store in Express.
@@ -41,7 +43,7 @@ server.on('listening', onListening);
 /**
  * Create socket.io server
  */
-var socketApi = require('../socketApi')(s, stateManager);
+const socketApi = require('../socketApi')(stateManager);
 let TomGuidance = require('../lib/TomGuidance')
 let TomABLine = require('../lib/TomABLine')
 let TomVehicle = require('../lib/TomVehicle');
