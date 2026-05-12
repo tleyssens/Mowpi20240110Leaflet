@@ -1,66 +1,86 @@
-"use strict"; // gebruikt in simulatie
+"use strict";
 
-var _require = require("../bin/config"),
-    s = _require.s,
-    constants = _require.constants,
-    Mower = _require.Mower;
+var config = require("../bin/config");
 
-var debugNmeaFunc = require("debug")("tom1:NmeaFunc"); //const constants = require("../lib/constants");
+var s = config.s; // backward compat
 
+var stateManager = config.stateManager;
+var isStateManager = !!(stateManager && typeof stateManager.get === 'function');
+
+var debugNmeaFunc = require("debug")("tom1:NmeaFunc");
 
 var dgram = require("dgram");
 
 var vec2 = require("../lib/vec");
 
-var _require2 = require("../lib/vec3"),
-    vec3 = _require2.vec3;
+var _require = require("../lib/vec3"),
+    vec3 = _require.vec3;
 
-var vecFix2Fix = require("../lib/vec3").vecFix2Fix; //var s = require("../bin/settings.json"); //laad json-data uit bestand
-
+var vecFix2Fix = require("../lib/vec3").vecFix2Fix;
 
 var autosteer = require("./autosteer");
 
-s.GUI.mf.guidanceLookPos = new vec2(0, 0);
-s.GUI.mf.fixHeading = 0.0;
-s.GUI.mf.guidanceLineSteerAngle = 90;
-s.GUI.mf.avgSpeed = 0; // gps gebruikt ? let pn = require('../bin/position.json') //position?
-//let TomGuidance = require("../lib/TomGuidance")
+var mower = config.Mower;
 
-var mower = Mower; //var nmeaSim = require('./NMEAsimTom.js')
+var NMEAstream = require("./NMEAstream.js");
 
-var NMEAstream = require("./NMEAstream.js"); // Teleplot
+var teleplot = dgram.createSocket('udp4'); // === Initialisatie ===
 
+function initState() {
+  if (isStateManager) {
+    stateManager.set('GUI.mf.guidanceLookPos', new vec2(0, 0));
+    stateManager.set('GUI.mf.fixHeading', 0.0);
+    stateManager.set('GUI.mf.guidanceLineSteerAngle', 90);
+    stateManager.set('GUI.mf.avgSpeed', 0);
+  } else {
+    s.GUI.mf.guidanceLookPos = new vec2(0, 0);
+    s.GUI.mf.fixHeading = 0.0;
+    s.GUI.mf.guidanceLineSteerAngle = 90;
+    s.GUI.mf.avgSpeed = 0;
+  }
+}
 
-var teleplot = dgram.createSocket('udp4');
-var msg;
+initState(); // Teleplot
+
 var lastData = "",
     lastTime = "";
 var prevQuality = '';
 
-var _require3 = require("child_process"),
-    execFile = _require3.execFile; //const { isNullOrUndefined } = require('util');
-
+var _require2 = require("child_process"),
+    execFile = _require2.execFile;
 
 var split = require("split");
 
-var PIDcontroller = require("node-pid-controller"),
-    GPS = require("../lib/TomGPS"),
-    gps = new GPS();
+var PIDcontroller = require("node-pid-controller");
 
+var GPS = require("../lib/TomGPS");
+
+var gps = new GPS();
 gps.state.bearing = 0;
 gps.prevSpeedFix = new vec2(0, 0);
 gps.avgSpeed = 0;
 gps.speed = 0;
 gps.previousSpeed = 0;
-gps.startSpeed = 0.5;
-s.ctr = new PIDcontroller({
-  k_p: s.pid.kp,
-  k_i: s.pid.ki,
-  k_d: s.pid.kd,
-  //dt: 1,
-  i_max: s.pid.imax,
-  target: s.pid.target
-});
+gps.startSpeed = 0.5; // PID Controller
+
+if (isStateManager) {
+  stateManager.set('ctr', new PIDcontroller({
+    k_p: stateManager.get('pid.kp'),
+    k_i: stateManager.get('pid.ki'),
+    k_d: stateManager.get('pid.kd'),
+    i_max: stateManager.get('pid.imax'),
+    target: stateManager.get('pid.target')
+  }));
+} else {
+  s.ctr = new PIDcontroller({
+    k_p: s.pid.kp,
+    k_i: s.pid.ki,
+    k_d: s.pid.kd,
+    i_max: s.pid.imax,
+    target: s.pid.target
+  });
+} // Kalman + andere initialisaties
+
 
 var Sylvester = require("sylvester"),
     Kalman = require("kalman").KF;
@@ -69,56 +89,24 @@ var A = Sylvester.Matrix.I(2);
 var B = Sylvester.Matrix.Zero(2, 2);
 var H = Sylvester.Matrix.I(2);
 var C = Sylvester.Matrix.I(2);
-var Q = Sylvester.Matrix.I(2).multiply(1e-5); //hoger getal => smoother en trager was 1e-5
+var Q = Sylvester.Matrix.I(2).multiply(1e-5);
+var R = Sylvester.Matrix.I(2).multiply(0.000002); // startpunt
 
-var R = Sylvester.Matrix.I(2).multiply(0.000002); //kleiner => sneller     0.000001
-//startpunt
-
-var u = $V([s.start1.lat, s.start1.lng]); //moeten de 2 waarden niet omgewisseld ? zie regel 163 / tom is start1
-
-var filter = new Kalman(u, //  $V([0, 0]),
-$M([[1, 0], [0, 1]]));
-var prev = {
-  lat: null,
-  lon: null
-};
-var parser;
-var nmeaStream;
-var stream;
+var start1 = isStateManager ? stateManager.get('start1') : s.start1;
+var u = $V([start1.lat, start1.lng]);
+var filter = new Kalman(u, $M([[1, 0], [0, 1]]));
 
 var pathPlan = require("./pathPlanning");
 
-var recordPath = require("./recordPath"); //var mission = require("./mission");//voor 19/10/2022
+var recordPath = require("./recordPath");
 
+var mission = require("./mission20221019");
 
-var mission = require("./mission20221019"); // vanaf 19/10/2022
-
-
-var noRTKteller = 0;
 var startCounter = 0,
-    speedCounter = 0,
-    gpsHz = s.gpsHz;
-var isFirstFixPositionSet = false,
-    isGPSPositionInitialized = false,
-    isFirstHeadingSet = false,
-    isJobStarted = false,
-    prevFix = new vec2(0, 0),
-    guidanceLookAheadTime = 1,
-    lastGPS = new vec2(0, 0),
-    currentStepFix = 0,
-    totalFixSteps = 20,
-    stepFixPts = new vecFix2Fix(totalFixSteps),
-    distanceCurrentStepFix = 0,
-    gpsHeading = 10.0,
-    minFixStepDist = 1,
-    isSuperSlow = false,
-    dist = 0,
-    pivotAxlePos = new vec3(0, 0, 0),
-    steerAxlePos = new vec3(0, 0, 0),
-    AutosteerVorige = false;
+    speedCounter = 0;
+var gpsHz = isStateManager ? stateManager.get('gpsHz') : s.gpsHz; // ====================== EXPORTS ======================
 
 exports.KeyReceived = function (data) {
-  //simulatie 
   switch (data.Key) {
     case "Steering":
       var X = parseFloat(data.steer);
@@ -159,10 +147,13 @@ exports.KeyReceived = function (data) {
       s.ABLine.mf.vehicle.goalPointLookAhead = data.value;
       break;
   }
+
+  debugNmeaFunc("KeyReceived called");
 };
 
-exports.startStream1 = function (socket, s, socketList) {
-  //debugNmeaFunc("this = %o", this)
+exports.startStream1 = function (socket, passedS, socketList) {
+  debugNmeaFunc("startStream1 started"); //debugNmeaFunc("this = %o", this)
+
   if (s.GUI.NMEA.choice === "GPS") {
     debugNmeaFunc("- ntrip van flepos naar GPS opstarten");
     runShellScript("/home/pi/MowPi100/startFlepos.sh"); //runShellScript('/home/pi/MowPi100/startNtripPa.sh')
@@ -224,6 +215,7 @@ exports.startStream1 = function (socket, s, socketList) {
 };
 
 exports.stopStream1 = function () {
+  debugNmeaFunc("stopStream1 called");
   debugNmeaFunc("185 stopStream1");
 
   if (s.GUI.NMEA.choice === "GPS") {
@@ -241,6 +233,7 @@ exports.stopStream1 = function () {
 };
 
 exports.Reset = function () {
+  debugNmeaFunc("Reset called");
   debugNmeaFunc("198 Reset gedrukt"); //s.mf.isAutoSteerBtnOn = false
 
   nmeaStream.nmea.latitude = s.start1.lat;
@@ -260,6 +253,11 @@ exports.enableEncoder = function () {};
 exports.slowStream = function (state) {
   debugNmeaFunc('streamtijd ', nmeaStream.time);
   nmeaStream.time = state ? 5000 : 200;
+}; // Extra helper voor StateManager
+
+
+exports.getS = function () {
+  return isStateManager ? stateManager : s;
 };
 
 function startParsing(stream, s, socketList) {
@@ -1023,3 +1021,5 @@ function sp2() {
 function clamp(val, min, max) {
   return val > max ? max : val < min ? min : val;
 }
+
+console.log("nmeaFunc.js loaded with StateManager support");

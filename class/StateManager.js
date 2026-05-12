@@ -13,7 +13,8 @@ class StateManager {
             obj = obj[keys[i]];
         }
         obj[keys[keys.length - 1]] = value;
-        this.emitChange(key, value);
+
+        this.emitChange();
         return value;
     }
 
@@ -22,26 +23,25 @@ class StateManager {
         const keys = key.split('.');
         let obj = this.state;
         for (let k of keys) {
-            obj = obj ? obj[k] : undefined;
+            if (obj === undefined || obj === null) return undefined;
+            obj = obj[k];
         }
         return obj;
-    }
-
-    update(partial) {
-        Object.assign(this.state, partial);
-        this.emitChange('update', partial);
     }
 
     setIO(ioInstance) {
         this.io = ioInstance;
     }
 
-    emitChange(key, value) {
+    emitChange() {
         if (this.io) {
-            // Volledige backward compatibility voor client
-            const fullState = this.get();
-            this.io.emit('s', fullState);
-            this.io.emit('state', fullState.GUI || fullState);
+            const fullState = this.state;
+            const guiState = this.get('GUI') || {};
+
+            // Belangrijk voor jouw client code
+            this.io.sockets.emit('s', fullState);        // <--- dit verwacht de map
+            this.io.sockets.emit('state', guiState);
+            this.io.sockets.emit('update', fullState);
         }
     }
 }
