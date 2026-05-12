@@ -1,10 +1,12 @@
 "use strict";
 
 const config = require("../bin/config");
-const s = config.s;                    // backward compat
+const s = config.s; // backward compat
 const stateManager = config.stateManager;
 
-const isStateManager = !!(stateManager && typeof stateManager.get === 'function');
+const isStateManager = !!(
+  stateManager && typeof stateManager.get === "function"
+);
 
 let debugNmeaFunc = require("debug")("tom1:NmeaFunc");
 const dgram = require("dgram");
@@ -17,28 +19,51 @@ var mower = config.Mower;
 
 var NMEAstream = require("./NMEAstream.js");
 
-var teleplot = dgram.createSocket('udp4');
+var teleplot = dgram.createSocket("udp4");
 
 // === Initialisatie ===
 function initState() {
-    if (isStateManager) {
-        stateManager.set('GUI.mf.guidanceLookPos', new vec2(0, 0));
-        stateManager.set('GUI.mf.fixHeading', 0.0);
-        stateManager.set('GUI.mf.guidanceLineSteerAngle', 90);
-        stateManager.set('GUI.mf.avgSpeed', 0);
-    } else {
-        s.GUI.mf.guidanceLookPos = new vec2(0, 0);
-        s.GUI.mf.fixHeading = 0.0;
-        s.GUI.mf.guidanceLineSteerAngle = 90;
-        s.GUI.mf.avgSpeed = 0;
-    }
+  if (isStateManager) {
+    stateManager.set("GUI.mf.guidanceLookPos", new vec2(0, 0));
+    stateManager.set("GUI.mf.fixHeading", 0.0);
+    stateManager.set("GUI.mf.guidanceLineSteerAngle", 90);
+    stateManager.set("GUI.mf.avgSpeed", 0);
+  } else {
+    state.GUI.mf.guidanceLookPos = new vec2(0, 0);
+    state.GUI.mf.fixHeading = 0.0;
+    state.GUI.mf.guidanceLineSteerAngle = 90;
+    state.GUI.mf.avgSpeed = 0;
+  }
 }
 
 initState();
 
+// Helper
+function getState(key) {
+    if (isStateManager) {
+        return stateManager.get(key);
+    }
+    return key ? s[key] : s;
+}
+
+function setState(key, value) {
+    if (isStateManager) {
+        stateManager.set(key, value);
+    } else {
+        // oude manier (voor compatibiliteit)
+        const keys = key.split('.');
+        let obj = s;
+        for (let i = 0; i < keys.length - 1; i++) {
+            obj = obj[keys[i]] = obj[keys[i]] || {};
+        }
+        obj[keys[keys.length - 1]] = value;
+    }
+}
+
 // Teleplot
-let lastData = "", lastTime = "";
-let prevQuality = '';
+let lastData = "",
+  lastTime = "";
+let prevQuality = "";
 
 const { execFile } = require("child_process");
 const split = require("split");
@@ -53,28 +78,35 @@ gps.speed = 0;
 gps.previousSpeed = 0;
 gps.startSpeed = 0.5;
 
+let nmeaStream, stream;
+let choice = "GPS Simulatie";
+let isGPSPositionInitialized = false;
+
 // PID Controller
 if (isStateManager) {
-    stateManager.set('ctr', new PIDcontroller({
-        k_p: stateManager.get('pid.kp'),
-        k_i: stateManager.get('pid.ki'),
-        k_d: stateManager.get('pid.kd'),
-        i_max: stateManager.get('pid.imax'),
-        target: stateManager.get('pid.target'),
-    }));
+  stateManager.set(
+    "ctr",
+    new PIDcontroller({
+      k_p: stateManager.get("pid.kp"),
+      k_i: stateManager.get("pid.ki"),
+      k_d: stateManager.get("pid.kd"),
+      i_max: stateManager.get("pid.imax"),
+      target: stateManager.get("pid.target"),
+    }),
+  );
 } else {
-    s.ctr = new PIDcontroller({
-        k_p: s.pid.kp,
-        k_i: s.pid.ki,
-        k_d: s.pid.kd,
-        i_max: s.pid.imax,
-        target: s.pid.target,
-    });
+  s.ctr = new PIDcontroller({
+    k_p: s.pid.kp,
+    k_i: s.pid.ki,
+    k_d: s.pid.kd,
+    i_max: s.pid.imax,
+    target: s.pid.target,
+  });
 }
 
 // Kalman + andere initialisaties
 var Sylvester = require("sylvester"),
-    Kalman = require("kalman").KF;
+  Kalman = require("kalman").KF;
 
 var A = Sylvester.Matrix.I(2);
 var B = Sylvester.Matrix.Zero(2, 2);
@@ -84,33 +116,43 @@ var Q = Sylvester.Matrix.I(2).multiply(1e-5);
 var R = Sylvester.Matrix.I(2).multiply(0.000002);
 
 // startpunt
-var start1 = isStateManager ? stateManager.get('start1') : s.start1;
+var start1 = isStateManager ? stateManager.get("start1") : s.start1;
 var u = $V([start1.lat, start1.lng]);
-var filter = new Kalman(u, $M([[1, 0], [0, 1]]));
+var filter = new Kalman(
+  u,
+  $M([
+    [1, 0],
+    [0, 1],
+  ]),
+);
 
 var pathPlan = require("./pathPlanning");
 var recordPath = require("./recordPath");
 let mission = require("./mission20221019");
 
-let startCounter = 0, speedCounter = 0;
-let gpsHz = isStateManager ? stateManager.get('gpsHz') : s.gpsHz;
+let startCounter = 0,
+  speedCounter = 0;
+let gpsHz = isStateManager ? stateManager.get("gpsHz") : s.gpsHz;
 
 // ====================== EXPORTS ======================
 
 exports.KeyReceived = function (data) {
-      switch (data.Key) {
+  switch (data.Key) {
     case "Steering":
       var X = parseFloat(data.steer);
       var Y = parseFloat(data.speed);
-      debugNmeaFunc("101 steerangle in key %s", map_range(X, -250, 250, -90, 90));
+      debugNmeaFunc(
+        "101 steerangle in key %s",
+        map_range(X, -250, 250, -90, 90),
+      );
       nmeaStream.nmea.steerangle = map_range(X, -250, 250, -90, 90);
       nmeaStream.nmea.stepDistance = map_range(Y, -250, 250, -0.2, 0.2);
       break;
     case "clickTarget":
-      if (!s.pos) s.pos = {}
+      if (!s.pos) s.pos = {};
       s.pos.target = {
         lat: data.value.lat,
-        lon: data.value.lng
+        lon: data.value.lng,
       };
       //traject.push(data.value.latLng);
       //io.emit('log', 'punt toegevoegd aan traject: ' + JSON.stringify(traject, null, 4));
@@ -129,47 +171,52 @@ exports.KeyReceived = function (data) {
       s.ctr.k_d = data.value;
       break;
     case "pureValue":
-      debugNmeaFunc("125 pureValue = " + JSON.stringify(data, null, 4))
-      s.ABLine.mf.vehicle.goalPointLookAhead = data.value
+      debugNmeaFunc("125 pureValue = " + JSON.stringify(data, null, 4));
+      s.ABLine.mf.vehicle.goalPointLookAhead = data.value;
       break;
   }
   debugNmeaFunc("KeyReceived called");
 };
 
 exports.startStream1 = function (socket, passedS, socketList) {
-    debugNmeaFunc("startStream1 started");
-      //debugNmeaFunc("this = %o", this)
-  if (s.GUI.NMEA.choice === "GPS") {
+  debugNmeaFunc("startStream1 called");
+  
+  const choice = getState("GUI.NMEA.choice");
+
+  debugNmeaFunc(`NMEA choice: ${choice}`);
+
+  if (choice === "GPS") {
     debugNmeaFunc("- ntrip van flepos naar GPS opstarten");
     runShellScript("/home/pi/MowPi100/startFlepos.sh");
     //runShellScript('/home/pi/MowPi100/startNtripPa.sh')
     //runShellScript('/home/pi/MowPi100/startNtripTom.sh')
-    nmeaStream = NMEAstream.getStream(s.GUI.NMEA.choice);
+    nmeaStream = NMEAstream.getStream(choice);
     //debugNmeaFunc('in startStream1')
-    debugNmeaFunc(Object.getOwnPropertyNames(nmeaStream))
+    debugNmeaFunc(Object.getOwnPropertyNames(nmeaStream));
     stream = nmeaStream.pipe(split("\r\n"));
     // debugNmeaFunc('parser :', parser)
     // if (parser = 'alert') {
     //   socket.emit('alert', 'Maak eerst een keuze in de dropdown')
     // } else {
-    stream.on('data', line => debugNmeaFunc(`${line}`))
+    stream.on("data", (line) => debugNmeaFunc(`${line}`));
     startParsing(stream, s, socketList);
     //}
-
   }
-  if (s.GUI.NMEA.choice === "GPSudp") {
-    debugNmeaFunc("151 ntrip van flepos naar TeensyGPS opstarten (via udp) => todo getRTCMstream.js opstarten via programma. voorlopig opstarten op Pi4B");
-    s.UDP.port = s.UDP.gpsPort
-    const  udpClientGPS = dgram.createSocket("udp4")
+  if (choice === "GPSudp") {
+    debugNmeaFunc(
+      "181 ntrip van flepos naar TeensyGPS opstarten (via udp) => todo getRTCMstream.js opstarten via programma. voorlopig opstarten op Pi4B",
+    );
+    s.UDP.port = s.UDP.gpsPort;
+    const udpClientGPS = dgram.createSocket("udp4");
     //getRTCMstream nog op te starten
-    debugNmeaFunc(Object.getOwnPropertyNames(socketList))
+    debugNmeaFunc(Object.getOwnPropertyNames(socketList));
     startParsingUDP(udpClientGPS, s, socketList);
   }
-  if (s.GUI.NMEA.choice === "GPS Simulatie") {
-    debugNmeaFunc("160 startStream1 GPS Simulatie")
+  if (choice === "GPS Simulatie") {
+    debugNmeaFunc("190 startStream1 GPS Simulatie");
     // zorgt voor de wijzerplaat
     //gps.state.speed = 0.2;
-    nmeaStream = NMEAstream.getStream(s.GUI.NMEA.choice);
+    nmeaStream = NMEAstream.getStream(choice);
     //debugNmeaFunc(Object.getOwnPropertyNames(nmeaStream)) //OK
     stream = nmeaStream.pipe(split("\r\n"));
     // debugNmeaFunc('parser :', parser)
@@ -179,65 +226,69 @@ exports.startStream1 = function (socket, passedS, socketList) {
     startParsing(stream, s, socketList);
     //}
   }
-  if (s.GUI.NMEA.choice === "GPSudp Simulatie") {
-    let udpSender = dgram.createSocket('udp4')
-    s.UDP.port = s.UDP.simPort
-    nmeaStream = NMEAstream.getStream(s.GUI.NMEA.choice)
+  if (choice === "GPSudp Simulatie") {
+    let udpSender = dgram.createSocket("udp4");
+    s.UDP.port = s.UDP.simPort;
+    nmeaStream = NMEAstream.getStream(choice);
     stream = nmeaStream.pipe(split("\r\n"));
-    stream.on('data', function (data) {
-      udpSender.send(data, 0, data.length, s.UDP.port, '127.0.0.1')
-    })
-    debugNmeaFunc("182 startUdpPandaSimStream")
-    const  udpClientGPS = dgram.createSocket("udp4")
+    stream.on("data", function (data) {
+      udpSender.send(data, 0, data.length, s.UDP.port, "127.0.0.1");
+    });
+    debugNmeaFunc("182 startUdpPandaSimStream");
+    const udpClientGPS = dgram.createSocket("udp4");
     // zorgt voor de wijzerplaat
     gps.state.speed = 0.2;
-    
+
     startParsingUDP(udpClientGPS, s, socketList);
     //}
   }
 };
 
 exports.stopStream1 = function () {
-    debugNmeaFunc("stopStream1 called");
-    debugNmeaFunc("185 stopStream1");
-    if (s.GUI.NMEA.choice === "GPS") {
-      mower.stop();
-      runShellScript("/home/pi/MowPi100/stopFlepos.sh");
-    }
-    if (s.GUI.NMEA.choice === "GPSudp") {
-      mower.stop();
-      return
-    }
-    //stream.pause();
-    nmeaStream.pause()
+  debugNmeaFunc("stopStream1 called");
+  console.log("→ NMEA stream gestopt");
+  debugNmeaFunc("185 stopStream1");
+  if (choice === "GPS") {
+    mower.stop();
+    runShellScript("/home/pi/MowPi100/stopFlepos.sh");
+  }
+  if (choice === "GPSudp") {
+    mower.stop();
+    return;
+  }
+  //stream.pause();
+  nmeaStream.pause();
 };
 
 exports.Reset = function () {
-    debugNmeaFunc("Reset called");
-     debugNmeaFunc("198 Reset gedrukt")
-    //s.mf.isAutoSteerBtnOn = false
-    nmeaStream.nmea.latitude = s.start1.lat
-    nmeaStream.nmea.longitude = s.start1.lng
-    nmeaStream.nmea.headingTrue = s.start1.richting * Math.PI/180
-    //nmeaStream.nmea.time = 100
-    nmeaStream.resume()
-    //s.pos.target = s.start1
-    //s.pos.temp = s.start1
-    //s.pos.target.lon = s.start1.lon
-    isFirstFixPositionSet = false
-    debugNmeaFunc(s)
+  debugNmeaFunc("Reset called");
+  debugNmeaFunc("198 Reset gedrukt");
+  //s.mf.isAutoSteerBtnOn = false
+  nmeaStream.nmea.latitude = s.start1.lat;
+  nmeaStream.nmea.longitude = s.start1.lng;
+  nmeaStream.nmea.headingTrue = (s.start1.richting * Math.PI) / 180;
+  //nmeaStream.nmea.time = 100
+  nmeaStream.resume();
+  //s.pos.target = s.start1
+  //s.pos.temp = s.start1
+  //s.pos.target.lon = s.start1.lon
+  isFirstFixPositionSet = false;
+  debugNmeaFunc(s);
 };
 exports.enableEncoder = function () {};
 exports.slowStream = function (state) {
-  debugNmeaFunc('streamtijd ', nmeaStream.time)
-  nmeaStream.time = (state ? 5000 : 200)
-}
+  debugNmeaFunc("streamtijd ", nmeaStream.time);
+  nmeaStream.time = state ? 5000 : 200;
+};
 // Extra helper voor StateManager
-exports.getS = function() {
-    return isStateManager ? stateManager : s;
+exports.getS = function () {
+  return isStateManager ? stateManager : s;
+};
+exports.getFullState = function() {
+    return isStateManager ? stateManager.get() : s;
 };
 function startParsing(stream, s, socketList) {
-  debugNmeaFunc("218 startParsing")
+  debugNmeaFunc("218 startParsing");
   //if(stream.paused) stream.resume()
   stream.on("data", function (data) {
     //ontvangt data van simulatie regel per regel
@@ -245,7 +296,7 @@ function startParsing(stream, s, socketList) {
     //debugNmeaFunc(d.getTime())
     //debugNmeaFunc('streamData', data)
     //socket.emit('nmea', data )// data.quality + " " + data.satellites + " " + data.hdop);//komt op ui/map
-    !isGPSPositionInitialized ? debugNmeaFunc(`238 ${data}`): null //regel alleen eerste 10 keer laten zien
+    !isGPSPositionInitialized ? debugNmeaFunc(`238 ${data}`) : null; //regel alleen eerste 10 keer laten zien
 
     try {
       gps.update(data); //stuur een regel door naar gps
@@ -264,23 +315,24 @@ function startParsing(stream, s, socketList) {
       s.GUI.gps = gps;
     }
   });
-  gps.on("GGA", function (data) {  //data bevat de huidige positie
+  gps.on("GGA", function (data) {
+    //data bevat de huidige positie
     //var t0 = performance.now();
     let verschil = Date.now() - data.time;
     //socketList.emit('log','verschil' + verschil)
     if (data.quality != prevQuality) {
-      console.log('quality = ' + data.quality);
+      console.log("quality = " + data.quality);
       socketList.emit(
         "quality",
-        data.quality + " " + data.satellites + " " + data.hdop
+        data.quality + " " + data.satellites + " " + data.hdop,
       );
-      prevQuality = data.quality
+      prevQuality = data.quality;
     }
-    
-    if (s.GUI.NMEA.choice === "GPS" && (verschil > 100 || verschil < -5)) return;
+
+    if (choice === "GPS" && (verschil > 100 || verschil < -5)) return;
 
     s.GUI.data = data;
-    
+
     if (
       data.valid === false ||
       data.lat === null ||
@@ -290,13 +342,13 @@ function startParsing(stream, s, socketList) {
       data.lat > 90 ||
       data.lon < -180 ||
       data.lon > 180
-      ) {
-        mower.stop()
-        socketList.emit('log', 'invalid data in nmeaFunc 277');
-        gps.state.speed = 0
-        return; //check valid values
+    ) {
+      mower.stop();
+      socketList.emit("log", "invalid data in nmeaFunc 277");
+      gps.state.speed = 0;
+      return; //check valid values
     }
-      // debugNmeaFunc(Object.getOwnPropertyNames(gps))
+    // debugNmeaFunc(Object.getOwnPropertyNames(gps))
     if (data.quality == "rtk" || data.quality == "rtk-float") {
       // || data.quality == 'dgps-fix' ) { // || data.quality == 'fix') {
       //socketList.emit('log','valid data');
@@ -317,11 +369,12 @@ function startParsing(stream, s, socketList) {
       // }
       gps.longitude = data.lon;
       gps.latitude = data.lat;
-      gps.fix = GPS.ConvertWGS84ToLocal( //northing en easthing berekenen
+      gps.fix = GPS.ConvertWGS84ToLocal(
+        //northing en easthing berekenen
         gps.latitude,
         gps.longitude,
         gps.latStart,
-        gps.lonStart
+        gps.lonStart,
       );
       debugNmeaFunc("306 gps.fix %o", gps.fix);
       data.position = {
@@ -329,31 +382,31 @@ function startParsing(stream, s, socketList) {
         pos: filter.x.elements,
       };
       gps.position = data.position;
-      msg = 'map:' + gps.fix.easting + ':' + gps.fix.northing + '|xy'
-      teleplot.send(msg, 0, msg.length, 47269, '127.0.0.1');
-      updateSpeed()
+      msg = "map:" + gps.fix.easting + ":" + gps.fix.northing + "|xy";
+      teleplot.send(msg, 0, msg.length, 47269, "127.0.0.1");
+      updateSpeed();
 
       //debugNmeaFunc("gps %o", gps)
-      
+
       //gps.fix = GPS.ConvertWGS84ToLocal(gps.state.lat, gps.state.lon, gps.latStart, gps.lonStart);
       /*************/
       //TheRest()
-      
+
       if (s.contour.isRecordOn) {
         recordPath.update(gps.state);
       }
-      
+
       if (s.autoMow2) {
         pathPlan.update(gps);
         if (s.uTurn) {
           if (s.targetHeading == s.ABLine.heading) {
-            if (s.GUI.NMEA.choice === "Simulatie") {
+            if (choice === "Simulatie") {
               nmeaStream.nmea.steerangle = -80; //simulatie alleen?
             } //trager de bocht nemen anders maakt hij cirkels omdat de hoek te veel in 1 keer veranderd
             s.GUI.LM = s.autoMowBochtSpeedBinnensteWiel - 40; // bocht onderkant LM 130 | RM 210 => draait te traag => binnenwiel vertragen 20201122
             s.GUI.RM = s.autoMowBochtSpeedBuitensteWiel + 20;
           } else {
-            if (s.GUI.NMEA.choice === "Simulatie") {
+            if (choice === "Simulatie") {
               nmeaStream.nmea.steerangle = 80;
             }
             s.GUI.LM = s.autoMowBochtSpeedBuitensteWiel; // bocht bovenkant LM 210| RM 130 = OK
@@ -364,27 +417,28 @@ function startParsing(stream, s, socketList) {
         }
       }
       if (s.GUI.Autosteer) {
-        s.AS.state = 100
-        autosteer.update(gps, socketList)
-        AutosteerVorige = true
-        nmeaStream.nmea.stepDistance = 0.05; //(1,8km/u)         
-        nmeaStream.nmea.steerangle = s.GUI.mf.guidanceLineSteerAngle * 0.01 *1.50;// was 0.01*1.5 hogere factor is korter draaien 1.85
-        if (s.GUI.NMEA.choice === "Simulatie") { 
+        s.AS.state = 100;
+        autosteer.update(gps, socketList);
+        AutosteerVorige = true;
+        nmeaStream.nmea.stepDistance = 0.05; //(1,8km/u)
+        nmeaStream.nmea.steerangle =
+          s.GUI.mf.guidanceLineSteerAngle * 0.01 * 1.5; // was 0.01*1.5 hogere factor is korter draaien 1.85
+        if (choice === "Simulatie") {
           s.GUI.angleIMU = nmeaStream.nmea.steerangle; //blauwe pijl
-        } 
-      }  else s.GUI.mf.isAutoSteerBtnOn = false;
+        }
+      } else s.GUI.mf.isAutoSteerBtnOn = false;
       if (s.GUI.mission.active) {
-        debugNmeaFunc('354 Mission active %o', data)
+        debugNmeaFunc("354 Mission active %o", data);
         mission.update(gps, socketList);
         if (s.mission.data.MissionPlan.State > 205) {
           // was 5
           sp2();
         }
       } else if (!s.GUI.Autosteer) {
-        if (AutosteerVorige = true) {
+        if ((AutosteerVorige = true)) {
           nmeaStream.nmea.stepDistance = 0.0001; // m/100ms
         }
-        AutosteerVorige = false
+        AutosteerVorige = false;
       }
       socketList.emit("position", data);
       s.GUI.pos.prev.lat = data.position.pos[0];
@@ -398,238 +452,241 @@ function startParsing(stream, s, socketList) {
         }
       } else {
         noRTKteller++;
-        socketList.emit('log','geen rtk = stoppen over %s seconden', 1 - noRTKteller/5)
+        socketList.emit(
+          "log",
+          "geen rtk = stoppen over %s seconden",
+          1 - noRTKteller / 5,
+        );
       }
-      mower.stop()
+      mower.stop();
     }
     if (s.GUI.driveEnable) {
       // Motoren aansturen
       //driveTest("via gps")
       mower.drive(s.GUI.LM, s.GUI.RM);
     } else {
-      mower.stop() //simulatie valt uit anders?
+      mower.stop(); //simulatie valt uit anders?
     }
     UpdateFixPosition(socketList);
-    socketList.emit('s', s.GUI);
-    socketList.emit('log',{text: "GGA data", data: s})
-
+    socketList.emit("s", s.GUI);
+    socketList.emit("log", { text: "GGA data", data: s });
   });
 }
 function startParsingUDP(udpClientGPS, s, socketList) {
-  debugNmeaFunc("394 startParsingUDP")
+  debugNmeaFunc("394 startParsingUDP");
   udpClientGPS.on("error", function (error) {
-        console.log("Error: " + error);
-        udpClientGPS.close();
-    });
+    console.log("Error: " + error);
+    udpClientGPS.close();
+  });
   udpClientGPS.on("message", async (buffer, info) => {
-      let data = String(buffer)
-      //data = data.slice(0,-2) //als je dit doet => valid = false
-      //s.GUI.INFO = data
-      //data = data.substring(0, data.length - 1);
-      //data = data.replace("*", "0000*")
-      //data = data.replace(" $PANDA","$GPGGA")
-      //debugNmeaFunc("udpdata = " + data)
+    let data = String(buffer);
+    //data = data.slice(0,-2) //als je dit doet => valid = false
+    //s.GUI.INFO = data
+    //data = data.substring(0, data.length - 1);
+    //data = data.replace("*", "0000*")
+    //data = data.replace(" $PANDA","$GPGGA")
+    //debugNmeaFunc("udpdata = " + data)
 
-      if (data != lastData) {
-        //debugNmeaFunc("409 nieuwe data")
-          try {
-            gps.update(data); //stuur een regel door naar gps
-            //socket.emit('nmea', gps)//komt op ui/map
-            s.GUI.gps = gps;
-          } catch (e) {
-            if (s.debugGPS) {
-              debugNmeaFunc(`gps not updated => ${e.name}: ${e.message}`);
-              return;
-            }
-          }
-          gps.on("data", function (data) {
-            //debugNmeaFunc('417 gpsdata %o', data) // data is zelfde als NDA
-            if (gps.state.speed < 10) { //20231015 gps.state.speed > 0 && 
-              //socket.emit('gpsState', gps.state);//data voor wijzerplaat en grafiek in mapsxx.html
-              s.GUI.gps = gps;
-            }
-          });
-          gps.on("NDA", function (data) {  //data bevat de huidige positie
-            if (data.time <= lastTime) { // filterd data die dubbel of te laat binnenkomt eruit
-              //debugNmeaFunc("Nu : " + data.time )
-              //debugNmeaFunc("Vorige: " + lastData)
-              return
-            }
-            lastTime = data.time
-            debugNmeaFunc("442 NDA data ontvangen %o ", data)
-            //debugNmeaFunc("socketList %o", socketList)
-            //var t0 = performance.now();
-            if (data.age !== null) { 
-              socketList.emit(
-                "quality",
-                data.quality + " " + data.satellites + " " + data.age
-              ); //20201024
-            } else { 
-                socketList.emit(
-                  "quality", data.time
-                )
-            }
-            /* if (s.debugGPS) {
+    if (data != lastData) {
+      //debugNmeaFunc("409 nieuwe data")
+      try {
+        gps.update(data); //stuur een regel door naar gps
+        //socket.emit('nmea', gps)//komt op ui/map
+        s.GUI.gps = gps;
+      } catch (e) {
+        if (s.debugGPS) {
+          debugNmeaFunc(`gps not updated => ${e.name}: ${e.message}`);
+          return;
+        }
+      }
+      gps.on("data", function (data) {
+        //debugNmeaFunc('417 gpsdata %o', data) // data is zelfde als NDA
+        if (gps.state.speed < 10) {
+          //20231015 gps.state.speed > 0 &&
+          //socket.emit('gpsState', gps.state);//data voor wijzerplaat en grafiek in mapsxx.html
+          s.GUI.gps = gps;
+        }
+      });
+      gps.on("NDA", function (data) {
+        //data bevat de huidige positie
+        if (data.time <= lastTime) {
+          // filterd data die dubbel of te laat binnenkomt eruit
+          //debugNmeaFunc("Nu : " + data.time )
+          //debugNmeaFunc("Vorige: " + lastData)
+          return;
+        }
+        lastTime = data.time;
+        debugNmeaFunc("442 NDA data ontvangen %o ", data);
+        //debugNmeaFunc("socketList %o", socketList)
+        //var t0 = performance.now();
+        if (data.age !== null) {
+          socketList.emit(
+            "quality",
+            data.quality + " " + data.satellites + " " + data.age,
+          ); //20201024
+        } else {
+          socketList.emit("quality", data.time);
+        }
+        /* if (s.debugGPS) {
               io.emit('log', 'GGAdata= ' + JSON.stringify(data, null, 4));
             }*/
-            //let verschil = Date.now() - data.time; //20220605
-            //if (s.GUI.NMEA.choice === "GPSudp" && (verschil > 100 || verschil < -5)) return;
-            //debugNmeaFunc('now %s, ggatime %s, verschil %s  ', Date.now(), data.time, (Date.now() - data.time)); //sim +36000000
-            //debugNmeaFunc(date.now())
-            //gps = {"events":{},"state":{"errors":0,"processed":3,"bearing":0,"time":"2022-06-05T22:00:51.100Z","lat":null,"lon":null,"speed":null,"track":null,"alt":null}}
-            //debugNmeaFunc("data.raw %s", data.raw)
-            //debugNmeaFunc(data.raw)
-        
-            s.data = data; //20201124
-        
-            if (
-              data.valid === false ||
-              data.lat === null ||
-              data.lon === null ||
-              gps.state.speed > 10 ||
-              data.lat < -90 ||
-              data.lat > 90 ||
-              data.lon < -180 ||
-              data.lon > 180
-            ) {
-              debugNmeaFunc(' 478 bad data')
-              mower.stop()
-              //io.emit('log', 'invalid data');
-              return; //check valid values
-            }
-            if (data.quality == "rtk" || data.quality == "rtk-float") {
-              // || data.quality == 'dgps-fix' ) { // || data.quality == 'fix') {
-              //io.emit('log','valid data');
-              if(!isJobStarted){
-                UpdateFixPosition(socketList)
-                return
-              }
-              filter.update({
-                A: A,
-                B: B,
-                C: C,
-                H: H,
-                R: R,
-                Q: Q,
-                u: u,
-                y: $V([data.lat, data.lon]),
-              });
-              ////debugNmeaFunc('gps %s', gps)
-              gps.longitude = data.lon;
-              gps.latitude = data.lat;
-              gps.fix = GPS.ConvertWGS84ToLocal(
-                gps.latitude,
-                gps.longitude,
-                gps.latStart,
-                gps.lonStart
-              );
-              updateSpeed()
-              debugNmeaFunc("510 gps.fix %o", gps.fix);
-              data.position = {
-                cov: filter.P.elements,
-                pos: filter.x.elements,
-              };
-              //debugNmeaFunc(data)
-              //s.data = data //gebeurde al in regel 153
-              gps.position = data.position;
-        
-              //debugNmeaFunc("gps %o", gps)
-              debugNmeaFunc("521 gps.state %o | %o",gps.state, gps.fix)
-        
-              //gps.fix = GPS.ConvertWGS84ToLocal(gps.state.lat, gps.state.lon, gps.latStart, gps.lonStart);
-              /*************/
-              //TheRest()
-        
-              if (s.contour.isRecordOn) {
-                recordPath.update(gps.state);
-              }
-        
-              //cc:Contour Opnemen#2; update pathplanning
-              if (s.autoMow2) {
-                pathPlan.update(gps);
-                if (s.uTurn) {
-                  if (s.targetHeading == s.ABLine.heading) {
-                    if (s.GUI.NMEA.choice === "Simulatie") {
-                      nmeaStream.nmea.steerangle = -80; //simulatie alleen?
-                    } //trager de bocht nemen anders maakt hij cirkels omdat de hoek te veel in 1 keer veranderd
-                    s.GUI.LM = s.autoMowBochtSpeedBinnensteWiel - 40; // bocht onderkant LM 130 | RM 210 => draait te traag => binnenwiel vertragen 20201122
-                    s.GUI.RM = s.autoMowBochtSpeedBuitensteWiel + 20;
-                  } else {
-                    if (s.GUI.NMEA.choice === "Simulatie") {
-                      nmeaStream.nmea.steerangle = 80;
-                    }
-                    s.GUI.LM = s.autoMowBochtSpeedBuitensteWiel; // bocht bovenkant LM 210| RM 130 = OK
-                    s.GUI.RM = s.autoMowBochtSpeedBinnensteWiel;
-                  }
-                } else {
-                  sp1();
-                }
-              }
-              if (s.GUI.Autosteer) {
-                s.AS.state = 100
-                autosteer.update(gps, socketList)
-                AutosteerVorige = true
-                nmeaStream.nmea.stepDistance = 0.05; //(1,8km/u)         
-                nmeaStream.nmea.steerangle = s.GUI.mf.guidanceLineSteerAngle * 0.01 *1.5;// was 0.01*1.5
-                if (s.GUI.NMEA.choice === "Simulatie") { 
-                  s.angleIMU = nmeaStream.nmea.steerangle; //blauwe pijl
-                } 
-              }  else s.GUI.mf.isAutoSteerBtnOn = false;
-              if (s.mission.active) {
-                //debugNmeaFunc('Mission active %o', data)
-                mission.update(gps, socketList);
-                if (s.mission.data.MissionPlan.State > 205) {
-                  // was 5
-                  sp2();
-                }
-              } else if (!s.GUI.Autosteer) {
-                if (AutosteerVorige = true) {
-                  nmeaStream.nmea.stepDistance = 0.0001; //20220512 m/100ms
-                }
-                AutosteerVorige = false
-              }
-              socketList.emit("position", data); //20201024
-              s.pos.prev.lat = data.position.pos[0];
-              s.pos.prev.lon = data.position.pos[1];
-              noRTKteller = 0;
-              //debugNmeaFunc(data.raw)
-            } else {
-              if (noRTKteller > 5) {
-                if (s.mission.active) {
-                  s.GUI.LM = 0;
-                  s.GUI.RM = 0;
-                }
-              } else {
-                noRTKteller++;
-                //debugNmeaFunc('geen rtk = stoppen over %s seconden', 1 - noRTKteller/5)
-              }
-              mower.stop()
-            }
-            if (s.GUI.driveEnable) {
-              // Motoren aansturen
-              //driveTest("via gps")
-              mower.drive(s.GUI.LM, s.GUI.RM);
-            } else {
-              mower.stop() 
-            }
-            UpdateFixPosition(socketList);
-            socketList.emit('s', s.GUI);
-          });
-        
-      }
-      lastData = data
+        //let verschil = Date.now() - data.time; //20220605
+        //if (choice === "GPSudp" && (verschil > 100 || verschil < -5)) return;
+        //debugNmeaFunc('now %s, ggatime %s, verschil %s  ', Date.now(), data.time, (Date.now() - data.time)); //sim +36000000
+        //debugNmeaFunc(date.now())
+        //gps = {"events":{},"state":{"errors":0,"processed":3,"bearing":0,"time":"2022-06-05T22:00:51.100Z","lat":null,"lon":null,"speed":null,"track":null,"alt":null}}
+        //debugNmeaFunc("data.raw %s", data.raw)
+        //debugNmeaFunc(data.raw)
 
-  })
-  udpClientGPS.on("listening", function () {
-      var address = udpClientGPS.address();
-      var port = address.port;
-      var family = address.family;
-      var ipaddr = address.address;
-      debugNmeaFunc("611 Server is listening at port " + port);
-      debugNmeaFunc("612 Server ip :" + ipaddr);
-      debugNmeaFunc("613 Server is IP4/IP6 : " + family);
+        s.data = data; //20201124
+
+        if (
+          data.valid === false ||
+          data.lat === null ||
+          data.lon === null ||
+          gps.state.speed > 10 ||
+          data.lat < -90 ||
+          data.lat > 90 ||
+          data.lon < -180 ||
+          data.lon > 180
+        ) {
+          debugNmeaFunc(" 478 bad data");
+          mower.stop();
+          //io.emit('log', 'invalid data');
+          return; //check valid values
+        }
+        if (data.quality == "rtk" || data.quality == "rtk-float") {
+          // || data.quality == 'dgps-fix' ) { // || data.quality == 'fix') {
+          //io.emit('log','valid data');
+          if (!isJobStarted) {
+            UpdateFixPosition(socketList);
+            return;
+          }
+          filter.update({
+            A: A,
+            B: B,
+            C: C,
+            H: H,
+            R: R,
+            Q: Q,
+            u: u,
+            y: $V([data.lat, data.lon]),
+          });
+          ////debugNmeaFunc('gps %s', gps)
+          gps.longitude = data.lon;
+          gps.latitude = data.lat;
+          gps.fix = GPS.ConvertWGS84ToLocal(
+            gps.latitude,
+            gps.longitude,
+            gps.latStart,
+            gps.lonStart,
+          );
+          updateSpeed();
+          debugNmeaFunc("510 gps.fix %o", gps.fix);
+          data.position = {
+            cov: filter.P.elements,
+            pos: filter.x.elements,
+          };
+          //debugNmeaFunc(data)
+          //s.data = data //gebeurde al in regel 153
+          gps.position = data.position;
+
+          //debugNmeaFunc("gps %o", gps)
+          debugNmeaFunc("521 gps.state %o | %o", gps.state, gps.fix);
+
+          //gps.fix = GPS.ConvertWGS84ToLocal(gps.state.lat, gps.state.lon, gps.latStart, gps.lonStart);
+          /*************/
+          //TheRest()
+
+          if (s.contour.isRecordOn) {
+            recordPath.update(gps.state);
+          }
+
+          //cc:Contour Opnemen#2; update pathplanning
+          if (s.autoMow2) {
+            pathPlan.update(gps);
+            if (s.uTurn) {
+              if (s.targetHeading == s.ABLine.heading) {
+                if (choice === "Simulatie") {
+                  nmeaStream.nmea.steerangle = -80; //simulatie alleen?
+                } //trager de bocht nemen anders maakt hij cirkels omdat de hoek te veel in 1 keer veranderd
+                s.GUI.LM = s.autoMowBochtSpeedBinnensteWiel - 40; // bocht onderkant LM 130 | RM 210 => draait te traag => binnenwiel vertragen 20201122
+                s.GUI.RM = s.autoMowBochtSpeedBuitensteWiel + 20;
+              } else {
+                if (choice === "Simulatie") {
+                  nmeaStream.nmea.steerangle = 80;
+                }
+                s.GUI.LM = s.autoMowBochtSpeedBuitensteWiel; // bocht bovenkant LM 210| RM 130 = OK
+                s.GUI.RM = s.autoMowBochtSpeedBinnensteWiel;
+              }
+            } else {
+              sp1();
+            }
+          }
+          if (s.GUI.Autosteer) {
+            s.AS.state = 100;
+            autosteer.update(gps, socketList);
+            AutosteerVorige = true;
+            nmeaStream.nmea.stepDistance = 0.05; //(1,8km/u)
+            nmeaStream.nmea.steerangle =
+              s.GUI.mf.guidanceLineSteerAngle * 0.01 * 1.5; // was 0.01*1.5
+            if (choice === "Simulatie") {
+              s.angleIMU = nmeaStream.nmea.steerangle; //blauwe pijl
+            }
+          } else s.GUI.mf.isAutoSteerBtnOn = false;
+          if (s.mission.active) {
+            //debugNmeaFunc('Mission active %o', data)
+            mission.update(gps, socketList);
+            if (s.mission.data.MissionPlan.State > 205) {
+              // was 5
+              sp2();
+            }
+          } else if (!s.GUI.Autosteer) {
+            if ((AutosteerVorige = true)) {
+              nmeaStream.nmea.stepDistance = 0.0001; //20220512 m/100ms
+            }
+            AutosteerVorige = false;
+          }
+          socketList.emit("position", data); //20201024
+          s.pos.prev.lat = data.position.pos[0];
+          s.pos.prev.lon = data.position.pos[1];
+          noRTKteller = 0;
+          //debugNmeaFunc(data.raw)
+        } else {
+          if (noRTKteller > 5) {
+            if (s.mission.active) {
+              s.GUI.LM = 0;
+              s.GUI.RM = 0;
+            }
+          } else {
+            noRTKteller++;
+            //debugNmeaFunc('geen rtk = stoppen over %s seconden', 1 - noRTKteller/5)
+          }
+          mower.stop();
+        }
+        if (s.GUI.driveEnable) {
+          // Motoren aansturen
+          //driveTest("via gps")
+          mower.drive(s.GUI.LM, s.GUI.RM);
+        } else {
+          mower.stop();
+        }
+        UpdateFixPosition(socketList);
+        socketList.emit("s", s.GUI);
+      });
+    }
+    lastData = data;
   });
-  
+  udpClientGPS.on("listening", function () {
+    var address = udpClientGPS.address();
+    var port = address.port;
+    var family = address.family;
+    var ipaddr = address.address;
+    debugNmeaFunc("611 Server is listening at port " + port);
+    debugNmeaFunc("612 Server ip :" + ipaddr);
+    debugNmeaFunc("613 Server is IP4/IP6 : " + family);
+  });
+
   //emits after the socket is closed using socket.close();
   udpClientGPS.on("close", function () {
     debugNmeaFunc("619 Socket is closed !");
@@ -647,24 +704,24 @@ function updateSpeed() {
   } else {
     gps.avgSpeed = GPS.AverageTheSpeed(gps.avgSpeed, gps.speed);
   }
-  gps.state.speed = gps.avgSpeed
+  gps.state.speed = gps.avgSpeed;
   s.GUI.speedometer.avgSpeed = gps.avgSpeed;
-  s.GUI.speedometer.localHeading = s.ABLine.localHeading
-  s.GUI.speedometer.howManyPathsAway = s.ABLine.howManyPathsAway
-  s.GUI.mf.avgSpeed = gps.avgSpeed
+  s.GUI.speedometer.localHeading = s.ABLine.localHeading;
+  s.GUI.speedometer.howManyPathsAway = s.ABLine.howManyPathsAway;
+  s.GUI.mf.avgSpeed = gps.avgSpeed;
   speedCounter++;
 }
 
 function UpdateFixPosition(socketList) {
   startCounter++;
-  debugNmeaFunc("642 gps.state %o", gps.state)
+  debugNmeaFunc("642 gps.state %o", gps.state);
   if (!isGPSPositionInitialized) {
     InitializeFirstFewGPSPositions(socketList);
-    socketList.emit('log', {text: "nmeaFunc:645 InitGPS"})
+    socketList.emit("log", { text: "nmeaFunc:645 InitGPS" });
   }
   //return process.exit(22);
-  
-    //calculate current heading only when moving, otherwise use last
+
+  //calculate current heading only when moving, otherwise use last
   if (Math.abs(gps.avgSpeed) < 1.5 && !isFirstHeadingSet) {
     TheRest(socketList);
     return;
@@ -682,7 +739,10 @@ function UpdateFixPosition(socketList) {
         stepFixPts[0].northing = gps.fix.northing;
         stepFixPts[0].easting = gps.fix.easting;
         stepFixPts[0].isSet = 1;
-        socketList.emit('log', { text: "nmeaFunc:664 in first after", data: stepFixPts[0]});
+        socketList.emit("log", {
+          text: "nmeaFunc:664 in first after",
+          data: stepFixPts[0],
+        });
         return;
       }
 
@@ -696,9 +756,12 @@ function UpdateFixPosition(socketList) {
         //}
         stepFixPts.pop(); //verwijderd het laatste element: werkt
         stepFixPts.unshift(
-          new vecFix2Fix(gps.fix.easting, 0, gps.fix.northing, 1)
+          new vecFix2Fix(gps.fix.easting, 0, gps.fix.northing, 1),
         ); //voegt nieuw punt vooraan toe
-        socketList.emit('log', { text: "nmeaFunc:682 in second", data: stepFixPts});
+        socketList.emit("log", {
+          text: "nmeaFunc:682 in second",
+          data: stepFixPts,
+        });
         return;
       }
 
@@ -709,20 +772,26 @@ function UpdateFixPosition(socketList) {
       // stepFixPts[0].isSet = 1;
       stepFixPts.pop(); //verwijderd het laatste element
       stepFixPts.unshift(
-        new vecFix2Fix(gps.fix.easting, 0, gps.fix.northing, 1)
+        new vecFix2Fix(gps.fix.easting, 0, gps.fix.northing, 1),
       ); //voegt nieuw punt vooraan toe
-      socketList.emit('log', { text: "nmeaFunc:695 in third", data: stepFixPts});
+      socketList.emit("log", {
+        text: "nmeaFunc:695 in third",
+        data: stepFixPts,
+      });
 
       gpsHeading = Math.atan2(
         gps.fix.easting - stepFixPts[2].easting,
-        gps.fix.northing - stepFixPts[2].northing
+        gps.fix.northing - stepFixPts[2].northing,
       );
       debugNmeaFunc("701 gpsHeading %s", gpsHeading);
 
       if (gpsHeading < 0) gpsHeading += 2.0 * Math.PI;
       else if (gpsHeading > 2.0 * Math.PI) gpsHeading -= 2.0 * Math.PI;
       s.GUI.mf.fixHeading = gpsHeading;
-      debugNmeaFunc("706 fixHeading %s°", (s.GUI.mf.fixHeading * 180) / Math.PI);
+      debugNmeaFunc(
+        "706 fixHeading %s°",
+        (s.GUI.mf.fixHeading * 180) / Math.PI,
+      );
 
       //now we have a heading, fix the first 3
       //get the distance from first to 2nd point
@@ -751,8 +820,8 @@ function UpdateFixPosition(socketList) {
         gps.fix.easting,
         distanceCurrentStepFix,
         gps.fix.northing,
-        1
-      )
+        1,
+      ),
     ); //voegt nieuw punt vooraan toe
     //debugNmeaFunc('398 stepFixPts %o', stepFixPts)
     // for (int i = totalFixSteps - 1; i > 0; i--) stepFixPts[i] = stepFixPts[i - 1];
@@ -778,11 +847,11 @@ function UpdateFixPosition(socketList) {
     //most recent heading
     let newHeading = Math.atan2(
       gps.fix.easting - stepFixPts[currentStepFix].easting,
-      gps.fix.northing - stepFixPts[currentStepFix].northing
+      gps.fix.northing - stepFixPts[currentStepFix].northing,
     );
     if (newHeading < 0) newHeading += constants.twoPI;
     else if (newHeading >= constants.twoPI) newHeading -= glm.twoPI;
-    s.GUI.speedometer.heading = GPS.toDegrees(newHeading)
+    s.GUI.speedometer.heading = GPS.toDegrees(newHeading);
 
     //debugNmeaFunc("newHeading", newHeading);
 
@@ -794,15 +863,15 @@ function UpdateFixPosition(socketList) {
   }
   TheRest(socketList);
   //break
-  debugNmeaFunc("779 ABLine " + s.ABLine.isABLineSet)
+  debugNmeaFunc("779 ABLine " + s.ABLine.isABLineSet);
   if (s.ABLine.isABLineSet && s.GUI.Autosteer) {
-    debugNmeaFunc('781 **************Autosteer')
+    debugNmeaFunc("781 **************Autosteer");
     s.ABLine.GetCurrentABLine(pivotAxlePos, steerAxlePos);
   }
 }
 
 function InitializeFirstFewGPSPositions(socketList) {
-  socketList.emit('log',{text: "nmeaFunc:784 InitGPS ", data: startCounter});
+  socketList.emit("log", { text: "nmeaFunc:784 InitGPS ", data: startCounter });
   if (!isFirstFixPositionSet) {
     if (!isJobStarted) {
       //socketList.emit('log', gps)
@@ -810,17 +879,17 @@ function InitializeFirstFewGPSPositions(socketList) {
       gps.lonStart = gps.state.lon;
       GPS.SetLocalMetersPerDegree(gps.latStart);
       isJobStarted = true;
-      socketList.emit('log', "gps = " + gps);
+      socketList.emit("log", "gps = " + gps);
     }
     gps.fix = GPS.ConvertWGS84ToLocal(
       gps.state.lat,
       gps.state.lon,
       gps.latStart,
-      gps.lonStart
+      gps.lonStart,
     ); // pn.fix.northing, out pn.fix.easting);
-    socketList.emit('log',{text: "nmeaFunc:800 InitGPS", data: gps.fix})
+    socketList.emit("log", { text: "nmeaFunc:800 InitGPS", data: gps.fix });
     debugNmeaFunc("801 firstFix gps.fix = %s ", gps.fix);
-    console.dir("first fix %s, %s", gps.fix.easting, gps.fix.northing)
+    console.dir("first fix %s, %s", gps.fix.easting, gps.fix.northing);
     //Draw a grid once we know where in the world we are.
 
     // //most recent fixes
@@ -831,15 +900,17 @@ function InitializeFirstFewGPSPositions(socketList) {
     //if (gps.state.processed > 1) isFirstFixPositionSet = true
     //else return;
     isFirstFixPositionSet = true;
-    socketList.emit('log', {text: "nmeaFunc:814 FirstFixPositionSet OK"});
+    socketList.emit("log", { text: "nmeaFunc:814 FirstFixPositionSet OK" });
     return;
   } else {
     prevFix.easting = gps.fix.easting;
     prevFix.northing = gps.fix.northing;
-    console.assert(isGPSPositionInitialized, "%o", { startCounter })
+    console.assert(isGPSPositionInitialized, "%o", { startCounter });
     if (startCounter > 9) {
       isGPSPositionInitialized = true;
-      socketList.emit('log', {text: "nmeaFunc:823 isGPSPositionInitialized OK"});
+      socketList.emit("log", {
+        text: "nmeaFunc:823 isGPSPositionInitialized OK",
+      });
     }
     return;
   }
@@ -863,7 +934,7 @@ function CalculatePositionHeading() {
     "843 guidanceLookDist = %s, lookPosE = %s, lookPosN = %s",
     guidanceLookDist,
     s.GUI.mf.guidanceLookPos.easting,
-    s.GUI.mf.guidanceLookPos.northing
+    s.GUI.mf.guidanceLookPos.northing,
   );
 }
 
@@ -910,13 +981,13 @@ function sp1() {
   }
 
   //debugNmeaFunc(Object.getOwnPropertyNames(nmeaStream))
-  if (s.GUI.NMEA.choice === "Simulatie") {
+  if (choice === "Simulatie") {
     //let sta = map_range(s.correction, 250,-250,-90,90)//45 was 90
     debugNmeaFunc(
       "896 in sp1 angleError = %s ;targetHeading = %s; steerangle = %s",
       s.angleError,
       s.targetHeading,
-      s.correction
+      s.correction,
     );
     //nmeaStream.nmea.steerangle = sta
     nmeaStream.nmea.steerangle = s.correction;
@@ -927,7 +998,7 @@ function sp1() {
       nmeaStream.nmea.stepDistance = 0.025; //m/100ms
     }
   }
-  if (s.GUI.NMEA.choice === "GPS") {
+  if (choice === "GPS") {
     debugNmeaFunc("911 LM:%s, RM:%s", s.GUI.LM, s.GUI.RM);
   }
 }
@@ -952,16 +1023,16 @@ function sp2() {
   }
 
   //debugNmeaFunc(Object.getOwnPropertyNames(nmeaStream))
-  if (s.GUI.NMEA.choice === "Simulatie") {
+  if (choice === "Simulatie") {
     nmeaStream.nmea.steerangle = s.correction;
     if (mower.state === "stopped") {
       debugNmeaFunc("mower stopped");
       nmeaStream.nmea.stepDistance = 0;
     } else {
-      nmeaStream.nmea.stepDistance = 0.1; 
+      nmeaStream.nmea.stepDistance = 0.1;
     }
   }
-  //if (s.GUI.NMEA.choice === "GPS") {
+  //if (choice === "GPS") {
   //debugNmeaFunc('LM:%s, RM:%s', s.GUI.LM, s.GUI.RM);
   //}
 }
