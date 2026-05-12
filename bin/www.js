@@ -1,26 +1,29 @@
 #!/usr/bin/env node
 
-/**
- * Load shared settings-data 
- */
-const config = require("./config");
-const s = config.s;  //oude compatibiliteit
-const stateManager = config.stateManager; //nieuwe StateManager
+const config = require('./config');
+const s = config.s;                    // oude compatibiliteit
+const stateManager = config.stateManager;
+const Mower = config.Mower;
 
-let nmeaFunc = require('../controllers/nmeaFunc')
+const express = require('express');
+const app = express();
 
-/**
- * Module dependencies.
- */
-var app = require('../app');
-var debug = require('debug')('tom1:http');
-const util = require('util');
+// Socket.IO setup
+const http = require('http');
+const server = http.createServer(app);
+const { Server } = require("socket.io");
+const io = new Server(server, {
+    cors: { origin: "*" }
+});
 
-var http = require('http');
-const {
-  monitorEventLoopDelay
-} = require('perf_hooks');
-const Mower = config.Mower
+// SocketApi initialisatie (aangepast voor StateManager)
+const socketApiModule = require('../socketApi');
+const socketApi = socketApiModule(stateManager, io);   // <--- Belangrijkste lijn
+
+// io doorgeven aan stateManager
+stateManager.setIO(io);
+
+console.log('StateManager en Socket.IO geïnitialiseerd');
 
 /**
  * Get port from environment and store in Express.
@@ -31,7 +34,7 @@ app.set('port', port);
 /**
  * Create HTTP server.
  */
-var server = http.createServer(app);
+//var server = http.createServer(app);
 
 /**
  * Listen on provided port, on all network interfaces.
@@ -43,7 +46,7 @@ server.on('listening', onListening);
 /**
  * Create socket.io server
  */
-const socketApi = require('../socketApi')(stateManager);
+//const socketApi = require('../socketApi')(stateManager);
 let TomGuidance = require('../lib/TomGuidance')
 let TomABLine = require('../lib/TomABLine')
 let TomVehicle = require('../lib/TomVehicle');
@@ -57,7 +60,7 @@ s.ABLine = ABLine
 
 TomVehicle.Vehicle(s.get ? s.get('GUI.mf') : s.GUI.mf)
 
-var io = socketApi.io;
+//var io = socketApi.io;
 io.attach(server);
   io.engine.on("connection_error", (err) => {
    console.log(err);
@@ -128,5 +131,5 @@ function onListening() {
   var bind = typeof addr === 'string' ?
     'pipe ' + addr :
     'port ' + addr.port;
-  debug('Listening on ' + bind);
+  //debug('Listening on ' + bind);
 }

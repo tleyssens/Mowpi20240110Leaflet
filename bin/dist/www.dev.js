@@ -1,34 +1,37 @@
 #!/usr/bin/env node
-
-/**
- * Load shared settings-data 
- */
 "use strict";
 
-var config = require("./config");
+var config = require('./config');
 
-var s = config.s; //oude compatibiliteit
+var s = config.s; // oude compatibiliteit
 
-var stateManager = config.stateManager; //nieuwe StateManager
+var stateManager = config.stateManager;
+var Mower = config.Mower;
 
-var nmeaFunc = require('../controllers/nmeaFunc');
-/**
- * Module dependencies.
- */
+var express = require('express');
 
-
-var app = require('../app');
-
-var debug = require('debug')('tom1:http');
-
-var util = require('util');
+var app = express(); // Socket.IO setup
 
 var http = require('http');
 
-var _require = require('perf_hooks'),
-    monitorEventLoopDelay = _require.monitorEventLoopDelay;
+var server = http.createServer(app);
 
-var Mower = config.Mower;
+var _require = require("socket.io"),
+    Server = _require.Server;
+
+var io = new Server(server, {
+  cors: {
+    origin: "*"
+  }
+}); // SocketApi initialisatie (aangepast voor StateManager)
+
+var socketApiModule = require('../socketApi');
+
+var socketApi = socketApiModule(stateManager, io); // <--- Belangrijkste lijn
+// io doorgeven aan stateManager
+
+stateManager.setIO(io);
+console.log('StateManager en Socket.IO geïnitialiseerd');
 /**
  * Get port from environment and store in Express.
  */
@@ -38,8 +41,8 @@ app.set('port', port);
 /**
  * Create HTTP server.
  */
+//var server = http.createServer(app);
 
-var server = http.createServer(app);
 /**
  * Listen on provided port, on all network interfaces.
  */
@@ -50,8 +53,7 @@ server.on('listening', onListening);
 /**
  * Create socket.io server
  */
-
-var socketApi = require('../socketApi')(stateManager);
+//const socketApi = require('../socketApi')(stateManager);
 
 var TomGuidance = require('../lib/TomGuidance');
 
@@ -65,8 +67,8 @@ s.gyd = Guidance;
 var ABLine = new TomABLine();
 ABLine.ABLine(s.get ? s.get('GUI.mf') : s.GUI.mf);
 s.ABLine = ABLine;
-TomVehicle.Vehicle(s.get ? s.get('GUI.mf') : s.GUI.mf);
-var io = socketApi.io;
+TomVehicle.Vehicle(s.get ? s.get('GUI.mf') : s.GUI.mf); //var io = socketApi.io;
+
 io.attach(server);
 io.engine.on("connection_error", function (err) {
   console.log(err);
@@ -136,6 +138,5 @@ function onError(error) {
 
 function onListening() {
   var addr = server.address();
-  var bind = typeof addr === 'string' ? 'pipe ' + addr : 'port ' + addr.port;
-  debug('Listening on ' + bind);
+  var bind = typeof addr === 'string' ? 'pipe ' + addr : 'port ' + addr.port; //debug('Listening on ' + bind);
 }
