@@ -55,7 +55,7 @@ function setState(key, value) {
     stateManager.set(key, value);
   } else {
     // oude manier (voor compatibiliteit)
-    var keys = key.split('.');
+    var keys = key.split(".");
     var obj = s;
 
     for (var i = 0; i < keys.length - 1; i++) {
@@ -213,7 +213,7 @@ exports.startStream1 = function (socket, passedS, socketList) {
   }
 
   if (choice === "GPS Simulatie") {
-    debugNmeaFunc("190 startStream1 GPS Simulatie"); // zorgt voor de wijzerplaat
+    debugNmeaFunc("216 startStream1 GPS Simulatie"); // zorgt voor de wijzerplaat
     //gps.state.speed = 0.2;
 
     nmeaStream = NMEAstream.getStream(choice); //debugNmeaFunc(Object.getOwnPropertyNames(nmeaStream)) //OK
@@ -296,7 +296,7 @@ exports.getFullState = function () {
 };
 
 function startParsing(stream, s, socketList) {
-  debugNmeaFunc("218 startParsing"); //if(stream.paused) stream.resume()
+  debugNmeaFunc("291 startParsing"); //if(stream.paused) stream.resume()
 
   stream.on("data", function (data) {
     //ontvangt data van simulatie regel per regel
@@ -304,7 +304,7 @@ function startParsing(stream, s, socketList) {
     //debugNmeaFunc(d.getTime())
     //debugNmeaFunc('streamData', data)
     //socket.emit('nmea', data )// data.quality + " " + data.satellites + " " + data.hdop);//komt op ui/map
-    !isGPSPositionInitialized ? debugNmeaFunc("238 ".concat(data)) : null; //regel alleen eerste 10 keer laten zien
+    !isGPSPositionInitialized ? debugNmeaFunc("299 ".concat(data)) : null; //regel alleen eerste 10 keer laten zien
 
     try {
       gps.update(data); //stuur een regel door naar gps
@@ -335,7 +335,14 @@ function startParsing(stream, s, socketList) {
     }
 
     if (choice === "GPS" && (verschil > 100 || verschil < -5)) return;
-    s.GUI.data = data;
+    debugNmeaFunc("333 s.GUI.data = data", data);
+
+    if (isStateManager) {
+      stateManager.set("GUI.data", data);
+    } else {
+      s.GUI.data = data;
+      debugNmeaFunc("335 s.GUI.data = %o", s.GUI.data);
+    }
 
     if (data.valid === false || data.lat === null || data.lon === null || gps.state.speed > 10 || data.lat < -90 || data.lat > 90 || data.lon < -180 || data.lon > 180) {
       mower.stop();
@@ -367,7 +374,7 @@ function startParsing(stream, s, socketList) {
       gps.latitude = data.lat;
       gps.fix = GPS.ConvertWGS84ToLocal( //northing en easthing berekenen
       gps.latitude, gps.longitude, gps.latStart, gps.lonStart);
-      debugNmeaFunc("306 gps.fix %o", gps.fix);
+      debugNmeaFunc("379 gps.fix %o", gps.fix);
       data.position = {
         cov: filter.P.elements,
         pos: filter.x.elements

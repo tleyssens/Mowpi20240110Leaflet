@@ -65,6 +65,7 @@ function () {
         }
       }
 
+      console.log("StateManager.get('".concat(key, "') =>"), obj);
       return obj;
     }
   }, {

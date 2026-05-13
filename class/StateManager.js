@@ -26,6 +26,7 @@ class StateManager {
             if (obj === undefined || obj === null) return undefined;
             obj = obj[k];
         }
+        console.log(`StateManager.get('${key}') =>`, obj);
         return obj;
     }
 

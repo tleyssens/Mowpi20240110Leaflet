@@ -40,24 +40,24 @@ initState();
 
 // Helper
 function getState(key) {
-    if (isStateManager) {
-        return stateManager.get(key);
-    }
-    return key ? s[key] : s;
+  if (isStateManager) {
+    return stateManager.get(key);
+  }
+  return key ? s[key] : s;
 }
 
 function setState(key, value) {
-    if (isStateManager) {
-        stateManager.set(key, value);
-    } else {
-        // oude manier (voor compatibiliteit)
-        const keys = key.split('.');
-        let obj = s;
-        for (let i = 0; i < keys.length - 1; i++) {
-            obj = obj[keys[i]] = obj[keys[i]] || {};
-        }
-        obj[keys[keys.length - 1]] = value;
+  if (isStateManager) {
+    stateManager.set(key, value);
+  } else {
+    // oude manier (voor compatibiliteit)
+    const keys = key.split(".");
+    let obj = s;
+    for (let i = 0; i < keys.length - 1; i++) {
+      obj = obj[keys[i]] = obj[keys[i]] || {};
     }
+    obj[keys[keys.length - 1]] = value;
+  }
 }
 
 // Teleplot
@@ -180,7 +180,7 @@ exports.KeyReceived = function (data) {
 
 exports.startStream1 = function (socket, passedS, socketList) {
   debugNmeaFunc("startStream1 called");
-  
+
   const choice = getState("GUI.NMEA.choice");
 
   debugNmeaFunc(`NMEA choice: ${choice}`);
@@ -213,7 +213,7 @@ exports.startStream1 = function (socket, passedS, socketList) {
     startParsingUDP(udpClientGPS, s, socketList);
   }
   if (choice === "GPS Simulatie") {
-    debugNmeaFunc("190 startStream1 GPS Simulatie");
+    debugNmeaFunc("216 startStream1 GPS Simulatie");
     // zorgt voor de wijzerplaat
     //gps.state.speed = 0.2;
     nmeaStream = NMEAstream.getStream(choice);
@@ -284,11 +284,11 @@ exports.slowStream = function (state) {
 exports.getS = function () {
   return isStateManager ? stateManager : s;
 };
-exports.getFullState = function() {
-    return isStateManager ? stateManager.get() : s;
+exports.getFullState = function () {
+  return isStateManager ? stateManager.get() : s;
 };
 function startParsing(stream, s, socketList) {
-  debugNmeaFunc("218 startParsing");
+  debugNmeaFunc("291 startParsing");
   //if(stream.paused) stream.resume()
   stream.on("data", function (data) {
     //ontvangt data van simulatie regel per regel
@@ -296,7 +296,7 @@ function startParsing(stream, s, socketList) {
     //debugNmeaFunc(d.getTime())
     //debugNmeaFunc('streamData', data)
     //socket.emit('nmea', data )// data.quality + " " + data.satellites + " " + data.hdop);//komt op ui/map
-    !isGPSPositionInitialized ? debugNmeaFunc(`238 ${data}`) : null; //regel alleen eerste 10 keer laten zien
+    !isGPSPositionInitialized ? debugNmeaFunc(`299 ${data}`) : null; //regel alleen eerste 10 keer laten zien
 
     try {
       gps.update(data); //stuur een regel door naar gps
@@ -330,9 +330,13 @@ function startParsing(stream, s, socketList) {
     }
 
     if (choice === "GPS" && (verschil > 100 || verschil < -5)) return;
-
-    s.GUI.data = data;
-
+    debugNmeaFunc("333 s.GUI.data = data", data );
+    if (isStateManager) {
+      stateManager.set("GUI.data", data );
+    } else {
+      s.GUI.data = data;
+      debugNmeaFunc("335 s.GUI.data = %o", s.GUI.data);
+    }
     if (
       data.valid === false ||
       data.lat === null ||
@@ -376,7 +380,7 @@ function startParsing(stream, s, socketList) {
         gps.latStart,
         gps.lonStart,
       );
-      debugNmeaFunc("306 gps.fix %o", gps.fix);
+      debugNmeaFunc("379 gps.fix %o", gps.fix);
       data.position = {
         cov: filter.P.elements,
         pos: filter.x.elements,
