@@ -121,6 +121,7 @@ var Q = Sylvester.Matrix.I(2).multiply(1e-5);
 var R = Sylvester.Matrix.I(2).multiply(0.000002); // startpunt
 
 var start1 = isStateManager ? stateManager.get("start1") : s.start1;
+debugNmeaFunc("start1: %o", start1);
 var u = $V([start1.lat, start1.lng]);
 var filter = new Kalman(u, $M([[1, 0], [0, 1]]));
 
@@ -223,7 +224,7 @@ exports.startStream1 = function (socket, passedS, socketList) {
     //   socket.emit('alert', 'Maak eerst een keuze in de dropdown')
     // } else {
 
-    startParsing(stream, s, socketList); //}
+    startParsing(stream, stateManager.get(), socketList); //}
   }
 
   if (choice === "GPSudp Simulatie") {
